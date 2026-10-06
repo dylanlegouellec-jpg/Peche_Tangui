@@ -18,9 +18,10 @@ interface Props {
   mode: Mode
   setMode: (m: Mode) => void
   windUnit: WindUnit
+  forecastDays: number
 }
 
-export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }: Props) {
+export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, forecastDays }: Props) {
   const spot = spots.find((s) => s.id === spotId) ?? spots[0]
   const [data, setData] = useState<Loaded | null | undefined>(() => peekForecast(spot?.id))
   const [selected, setSelected] = useState<number | null>(null)
@@ -70,13 +71,16 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   const all = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, 0, windUnit) : []), [data, tides, mode, windUnit])
   const todayKey = dayKey(now)
   // 7 jours à partir d'aujourd'hui ; les créneaux déjà passés d'aujourd'hui sont ignorés.
-  const windows = useMemo(() => bestWindows(all.filter((s) => s.ts >= now - 3600 && dayKey(s.ts) >= todayKey)), [all, now, todayKey])
+  const allWindows = useMemo(() => bestWindows(all.filter((s) => s.ts >= now - 3600 && dayKey(s.ts) >= todayKey)), [all, now, todayKey])
+  // Les jours affichés dans la rangée et la liste suivent le réglage ; le calendrier donne accès à toutes les prévisions disponibles.
+  const windows = useMemo(() => allWindows.slice(0, forecastDays), [allWindows, forecastDays])
   const activeDay = day && day >= todayKey ? day : todayKey
-  const inRange = windows.some((w) => w.key === activeDay)
-  const scores = useMemo(() => Object.fromEntries(windows.map((w) => [w.key, w.avg])), [windows])
-  const lastForecast = windows[windows.length - 1]?.key ?? todayKey
+  const inRange = allWindows.some((w) => w.key === activeDay)
+  const shown = windows.some((w) => w.key === activeDay)
+  const scores = useMemo(() => Object.fromEntries(allWindows.map((w) => [w.key, w.avg])), [allWindows])
+  const lastForecast = allWindows[allWindows.length - 1]?.key ?? todayKey
   const dayHours = all.filter((s) => dayKey(s.ts) === activeDay)
-  const dayWindow = windows.find((w) => w.key === activeDay)
+  const dayWindow = allWindows.find((w) => w.key === activeDay)
   const bars = dayHours
   const nowHour = all.find((s) => s.ts <= now && now < s.ts + 3600)
   const isToday = activeDay === todayKey
@@ -151,11 +155,11 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
                 <b className={tone(w.avg)}>{w.avg}</b>
               </button>
             ))}
-            {!inRange && (
+            {!shown && (
               <button role="tab" aria-selected className="day on partial" {...press} onClick={() => setCalendar(true)}>
                 <span className="dw">{new Date(noonOf(activeDay) * 1000).toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '')}</span>
                 <span className="dn">{Number(activeDay.slice(8))}</span>
-                <b>plan</b>
+                <b>{inRange ? (dayWindow?.avg ?? '') : 'plan'}</b>
               </button>
             )}
             <button className="day cal" onClick={() => setCalendar(true)} aria-label="Ouvrir le calendrier">
@@ -243,20 +247,6 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
             </div>
             <div className="col">
           <div className="card">
-            <h3>Prévisions sur {windows.length} jours</h3>
-            <p className="muted small">Meilleur créneau de 2 h de chaque jour. Touche un jour pour le détailler.</p>
-            {windows.map((w) => (
-              <div className={`win pick ${w.key === activeDay ? 'on' : ''}`} key={w.key} onClick={() => chooseDay(w.key)}>
-                <span className="cap">{w.day}</span>
-                <span>
-                  {hhmm(w.start)} – {hhmm(w.end)}
-                </span>
-                <b className={tone(w.avg)}>{w.avg}</b>
-              </div>
-            ))}
-          </div>
-
-          <div className="card">
             <h3>Heure par heure · <span className="cap">{dayLabel(dayHours[0].ts)}</span></h3>
             <div
               className="spark"
@@ -286,6 +276,20 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
             </div>
             <div className="axis" aria-hidden="true"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
             <div className="muted small">Fais glisser ton doigt sur les barres pour voir le détail de chaque heure.</div>
+          </div>
+
+          <div className="card">
+            <h3>Prévisions sur {windows.length} jours</h3>
+            <p className="muted small">Meilleur créneau de 2 h de chaque jour. Touche un jour pour le détailler.</p>
+            {windows.map((w) => (
+              <div className={`win pick ${w.key === activeDay ? 'on' : ''}`} key={w.key} onClick={() => chooseDay(w.key)}>
+                <span className="cap">{w.day}</span>
+                <span>
+                  {hhmm(w.start)} – {hhmm(w.end)}
+                </span>
+                <b className={tone(w.avg)}>{w.avg}</b>
+              </div>
+            ))}
           </div>
 
           <div className="card">

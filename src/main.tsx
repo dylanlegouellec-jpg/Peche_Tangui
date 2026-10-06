@@ -27,6 +27,11 @@ if ('serviceWorker' in navigator) {
     const typing = () => document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement
     const reload = () => {
       reloading = true
+      try {
+        sessionStorage.setItem('peche-updated', '1')
+      } catch {
+        /* stockage indisponible */
+      }
       location.reload()
     }
     if (typing()) document.addEventListener('focusout', reload, { once: true })

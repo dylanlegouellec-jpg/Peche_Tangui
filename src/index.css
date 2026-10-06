@@ -221,3 +221,6 @@ img { -webkit-user-drag: none; user-select: none; }
 .pin.good { background: #2fb673; } .pin.mid { background: #2f9bd8; }
 .pop { min-width: 150px; line-height: 1.35; color: #12304a; } .pop button { margin-top: 6px; padding: 6px 10px; border-radius: 8px; border: 0; background: #2f9bd8; color: #fff; font-weight: 600; width: 100%; }
 .leaflet-popup-content-wrapper { border-radius: 12px; } .leaflet-popup-content { margin: 10px 12px; }
+
+.toast { position: fixed; z-index: 40; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 64px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .9rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); animation: toast-in .45s cubic-bezier(.34, 1.5, .5, 1) both; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -16px) scale(.9); } }

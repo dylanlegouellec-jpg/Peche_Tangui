@@ -93,6 +93,18 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
               <span>Unité du vent</span>
               <Seg<WindUnit> value={settings.windUnit} options={[['kmh', 'km/h'], ['kt', 'nœuds']]} onChange={(windUnit) => saveSettings({ windUnit })} />
             </div>
+            <div>
+              <div className="row between">
+                <span>Jours de prévisions</span>
+                <span className="muted">{settings.forecastDays} jours</span>
+              </div>
+              <div className="seg full" role="group" aria-label="Jours de prévisions">
+                {[3, 5, 8, 12, 16].map((n) => (
+                  <button key={n} className={settings.forecastDays === n ? 'on' : ''} onClick={() => saveSettings({ forecastDays: n })}>{n}</button>
+                ))}
+              </div>
+              <p className="muted small">Plus on regarde loin, plus c’est incertain. Au-delà de 8 jours, la houle et les marées ne sont plus prévues. Les jours au-delà de ton choix restent accessibles par le calendrier.</p>
+            </div>
             <div className="row between">
               <span>Type de sortie</span>
               <Seg<Mode> value={settings.defaultMode} options={[['bord', 'Bord'], ['plongee', 'Sous-marine']]} onChange={(defaultMode) => saveSettings({ defaultMode })} />
@@ -142,7 +154,7 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
 
       <Group title="Paramètres">
         <Row icon={<IconPalette />} color="#9b6bc2" label="Apparence" onClick={() => setPage('appearance')} />
-        <Row icon={<IconSliders />} color="#d9714f" label="Pêche & unités" hint={settings.windUnit === 'kt' ? 'nœuds' : 'km/h'} onClick={() => setPage('fishing')} />
+        <Row icon={<IconSliders />} color="#d9714f" label="Pêche & unités" hint={`${settings.forecastDays} j`} onClick={() => setPage('fishing')} />
       </Group>
 
       <Group title="Compte & données">

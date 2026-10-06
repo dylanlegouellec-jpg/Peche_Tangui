@@ -16,6 +16,17 @@ const ORDER: Tab[] = ['today', 'species', 'journal', 'spots', 'settings']
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
+  const [toast, setToast] = useState<string | null>(() => {
+    try {
+      if (sessionStorage.getItem('peche-updated')) {
+        sessionStorage.removeItem('peche-updated')
+        return `Appli mise à jour (version ${__COMMIT__})`
+      }
+    } catch {
+      /* stockage indisponible */
+    }
+    return null
+  })
   const [dir, setDir] = useState<'fwd' | 'back'>('fwd')
   const scrollRef = useRef<HTMLElement>(null)
   const [spots, setSpots] = useState<Spot[]>([])
@@ -41,6 +52,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty('--tab-alpha', `${settings.tabOpacity}%`)
   }, [settings.tabOpacity])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const changeTab = (t: Tab) => {
     if (t === tab) return
@@ -71,7 +88,7 @@ export default function App() {
         ) : spots.length === 0 ? (
           <p className="muted">Ajoute un spot pour commencer.</p>
         ) : tab === 'today' ? (
-          <TodayView spots={spots} spotId={currentSpot} setSpotId={setSpotId} mode={currentMode} setMode={setMode} windUnit={settings.windUnit} />
+          <TodayView spots={spots} spotId={currentSpot} setSpotId={setSpotId} mode={currentMode} setMode={setMode} windUnit={settings.windUnit} forecastDays={settings.forecastDays} />
         ) : tab === 'species' ? (
           <SpeciesView mode={currentMode} />
         ) : (
@@ -81,6 +98,7 @@ export default function App() {
         </div>
       </main>
       <TabBar tab={tab} onChange={changeTab} />
+      {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   )
 }

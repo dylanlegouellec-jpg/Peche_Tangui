@@ -96,13 +96,15 @@ export interface Settings {
   defaultSpotUid?: string
   /** Opacité du fond de la barre d'onglets, en % (20–100). */
   tabOpacity: number
+  /** Nombre de jours de prévisions affichés (la rangée de jours et la liste). */
+  forecastDays: number
   firstName?: string
   lastName?: string
   /** Identifiant de la photo de profil (table photos). */
   avatarUid?: string
 }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 92 }
+export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 92, forecastDays: 8 }
 
 export interface PhotoRow {
   uid: string
