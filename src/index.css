@@ -66,3 +66,8 @@ h3.sec { margin: 18px 0 0; color: var(--muted); font-size: .85rem; text-transfor
 .tabbar button:active { transform: scale(.88); }
 .tabbar button.on { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .tabbar .pill, .tabbar button { transition: none; } }
+
+/* Champ date : iOS lui donne une largeur propre qui déborde de la carte */
+input.dt { -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 0; max-width: 100%; min-height: 46px; text-align: left; }
+input.dt::-webkit-date-and-time-value { text-align: left; }
+.filebtn { display: block; text-align: center; margin: 6px 0; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); cursor: pointer; }

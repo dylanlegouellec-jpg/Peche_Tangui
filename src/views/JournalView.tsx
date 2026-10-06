@@ -153,7 +153,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
         <button type="button" className={mode === 'bord' ? 'on' : ''} onClick={() => setMode('bord')}>Bord de mer</button>
         <button type="button" className={mode === 'plongee' ? 'on' : ''} onClick={() => setMode('plongee')}>Sous-marine</button>
       </div>
-      <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
+      <input className="dt" type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
       <datalist id="species">{SPECIES.map((s) => <option key={s.name} value={s.name} />)}</datalist>
       {catches.map((c, i) => (
         <div className="row" key={i}>
@@ -163,7 +163,10 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
         </div>
       ))}
       <button type="button" onClick={() => setCatches([...catches, { species: '' }])}>+ Ajouter une prise</button>
-      <input type="file" accept="image/*" multiple onChange={async (e) => setPhotos([...photos, ...(await Promise.all([...(e.target.files ?? [])].map((f) => shrinkPhoto(f))))])} />
+      <label className="filebtn">
+        📷 {photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''} · ajouter` : 'Ajouter des photos'}
+        <input type="file" accept="image/*" multiple hidden onChange={async (e) => { const files = [...(e.target.files ?? [])]; e.target.value = ''; const done = await Promise.all(files.map((f) => shrinkPhoto(f))); setPhotos((cur) => [...cur, ...done]) }} />
+      </label>
       {photos.length > 0 && <Gallery blobs={photos} />}
       <textarea placeholder="Notes (appât, courant, comportement du poisson…)" value={notes} onChange={(e) => setNotes(e.target.value)} />
       <div className="row">
