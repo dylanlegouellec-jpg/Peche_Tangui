@@ -32,6 +32,8 @@ export interface Sun {
 
 export interface Forecast {
   spotId: number
+  lat?: number
+  lon?: number
   fetchedAt: number
   hours: HourPoint[]
   sun: Sun[]

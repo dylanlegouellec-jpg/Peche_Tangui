@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { findTides, loadForecast } from '../lib/forecast'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
 import { estimatedCoef, moonLabel } from '../lib/moon'
 import { bestWindows, scoreSeries } from '../lib/scoring'
-import type { Forecast, Mode, Spot, WindUnit } from '../lib/types'
+import type { Mode, Spot, WindUnit } from '../lib/types'
 
 const hhmm = (ts: number) => new Date(ts * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
 const dayShort = (ts: number) => new Date(ts * 1000).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'Europe/Paris' })
@@ -19,19 +19,44 @@ interface Props {
 
 export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }: Props) {
   const spot = spots.find((s) => s.id === spotId) ?? spots[0]
-  const [data, setData] = useState<{ forecast: Forecast; offline: boolean } | null | undefined>(undefined)
+  const [data, setData] = useState<Loaded | null | undefined>(() => peekForecast(spot?.id))
   const [selected, setSelected] = useState<number | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const sparkRef = useRef<HTMLDivElement>(null)
+  const dataRef = useRef(data)
+  dataRef.current = data
+
+  // `force` = true : on ignore le cache de 15 min (bouton ↻, retour sur l'appli après un long moment, toutes les 30 min).
+  const refresh = useCallback(
+    async (force: boolean) => {
+      if (!spot) return
+      setRefreshing(true)
+      const d = await loadForecast(spot, force)
+      setData((prev) => d ?? prev ?? null)
+      setRefreshing(false)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [spot?.id, spot?.lat, spot?.lon],
+  )
 
   useEffect(() => {
-    if (!spot) return
-    let cancelled = false
-    setData(undefined)
-    loadForecast(spot).then((d) => !cancelled && setData(d))
-    return () => {
-      cancelled = true
+    setData(peekForecast(spot?.id))
+    refresh(false)
+  }, [refresh, spot?.id])
+
+  useEffect(() => {
+    const stale = () => {
+      const f = dataRef.current?.forecast
+      return !f || Date.now() - f.fetchedAt > 2 * FRESH_MS
     }
-  }, [spot])
+    const onVisible = () => document.visibilityState === 'visible' && stale() && refresh(true)
+    document.addEventListener('visibilitychange', onVisible)
+    const timer = setInterval(() => refresh(true), 30 * 60 * 1000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(timer)
+    }
+  }, [refresh])
 
   const now = Math.floor(Date.now() / 1000)
   const tides = useMemo(() => (data ? findTides(data.forecast.hours) : []), [data])
@@ -81,6 +106,15 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
               <strong>{focus.ts === current.ts ? 'Maintenant' : `${dayShort(focus.ts)} ${hhmm(focus.ts)}`}</strong>
               <div className="muted">{focus.score >= 70 ? 'Conditions très favorables' : focus.score >= 45 ? 'Conditions correctes' : 'Conditions peu favorables'}</div>
             </div>
+          </div>
+
+          <div className="row between muted small updated">
+            <span>
+              Open-Meteo · mis à jour à {new Date(data.forecast.fetchedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <button className="mini" onClick={() => refresh(true)} disabled={refreshing} aria-label="Actualiser les prévisions">
+              <span className={refreshing ? 'spin' : ''}>↻</span> Actualiser
+            </button>
           </div>
 
           {focus.warnings.map((w) => (

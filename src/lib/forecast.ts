@@ -3,15 +3,29 @@ import type { Forecast, HourPoint, Spot, Tide } from './types'
 
 const TZ = 'Europe/Paris'
 
-async function getJson(url: string) {
-  const r = await fetch(url)
+async function getJson(url: string, timeoutMs = 12000) {
+  const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
   if (!r.ok) throw new Error(`HTTP ${r.status}`)
   return r.json()
 }
 
+export type Loaded = { forecast: Forecast; offline: boolean }
+
+/** Les prévisions sont réutilisées tant qu'elles ont moins de 15 min (Open-Meteo les met à jour toutes les 1 à 3 h). */
+export const FRESH_MS = 15 * 60 * 1000
+
+const memory = new Map<number, Loaded>()
+/** Dernières prévisions déjà chargées pour ce spot, pour afficher sans attendre pendant la mise à jour. */
+export const peekForecast = (spotId: number | undefined) => (spotId == null ? undefined : memory.get(spotId))
+
 /** Prévisions Open-Meteo (météo + marine), sans clé API. Retombe sur le cache hors-ligne. */
-export async function loadForecast(spot: Spot): Promise<{ forecast: Forecast; offline: boolean } | null> {
+export async function loadForecast(spot: Spot, force = false): Promise<Loaded | null> {
   const id = spot.id!
+  const remember = (l: Loaded) => (memory.set(id, l), l)
+  if (!force) {
+    const cached = memory.get(id)?.forecast ?? (await db.forecasts.get(id))
+    if (cached && cached.lat === spot.lat && cached.lon === spot.lon && Date.now() - cached.fetchedAt < FRESH_MS) return remember({ forecast: cached, offline: false })
+  }
   try {
     const common = `latitude=${spot.lat}&longitude=${spot.lon}&timezone=${TZ}&timeformat=unixtime&past_days=2&forecast_days=5`
     const [meteo, marine] = await Promise.all([
@@ -20,6 +34,7 @@ export async function loadForecast(spot: Spot): Promise<{ forecast: Forecast; of
       ),
       getJson(
         `https://marine-api.open-meteo.com/v1/marine?${common}&hourly=wave_height,wave_period,sea_surface_temperature,sea_level_height_msl`,
+        8000,
       ).catch(() => null),
     ])
     const mh = marine?.hourly
@@ -36,12 +51,12 @@ export async function loadForecast(spot: Spot): Promise<{ forecast: Forecast; of
       seaLevel: mh?.sea_level_height_msl?.[i] ?? null,
     }))
     const sun = meteo.daily.sunrise.map((s: number, i: number) => ({ sunrise: s, sunset: meteo.daily.sunset[i] }))
-    const forecast: Forecast = { spotId: id, fetchedAt: Date.now(), hours, sun }
+    const forecast: Forecast = { spotId: id, lat: spot.lat, lon: spot.lon, fetchedAt: Date.now(), hours, sun }
     await db.forecasts.put(forecast)
-    return { forecast, offline: false }
+    return remember({ forecast, offline: false })
   } catch {
     const cached = await db.forecasts.get(id)
-    return cached ? { forecast: cached, offline: true } : null
+    return cached ? remember({ forecast: cached, offline: true }) : null
   }
 }
 

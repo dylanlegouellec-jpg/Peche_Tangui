@@ -1,5 +1,5 @@
 import { liveQuery } from 'dexie'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Avatar } from './components/Avatar'
 import { TabBar, type Tab } from './components/TabBar'
 import { loadSettings, seedSpots } from './lib/db'
@@ -12,8 +12,12 @@ import { SpeciesView } from './views/SpeciesView'
 import { SpotsView } from './views/SpotsView'
 import { TodayView } from './views/TodayView'
 
+const ORDER: Tab[] = ['today', 'species', 'journal', 'spots', 'settings']
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
+  const [dir, setDir] = useState<'fwd' | 'back'>('fwd')
+  const scrollRef = useRef<HTMLElement>(null)
   const [spots, setSpots] = useState<Spot[]>([])
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [spotId, setSpotId] = useState<number>()
@@ -38,6 +42,13 @@ export default function App() {
     document.documentElement.style.setProperty('--tab-alpha', `${settings.tabOpacity}%`)
   }, [settings.tabOpacity])
 
+  const changeTab = (t: Tab) => {
+    if (t === tab) return
+    setDir(ORDER.indexOf(t) > ORDER.indexOf(tab) ? 'fwd' : 'back')
+    setTab(t)
+    scrollRef.current?.scrollTo({ top: 0 })
+  }
+
   const currentMode = mode ?? settings.defaultMode
   const currentSpot = spotId ?? spots.find((s) => s.uid === settings.defaultSpotUid)?.id
 
@@ -46,12 +57,13 @@ export default function App() {
       <header>
         <h1>Pêche</h1>
         <span className="muted small">Morbihan</span>
-        <button className="avatar-btn" onClick={() => setTab('settings')} aria-label="Profil et réglages">
+        <button className="avatar-btn" onClick={() => changeTab('settings')} aria-label="Profil et réglages">
           <Avatar settings={settings} size={32} />
         </button>
       </header>
-      <main className="scroll">
+      <main className="scroll" ref={scrollRef}>
         <div className="app">
+          <div className={`page ${dir}`} key={tab}>
         {tab === 'settings' ? (
           <SettingsView settings={settings} spots={spots} />
         ) : tab === 'spots' ? (
@@ -65,9 +77,10 @@ export default function App() {
         ) : (
           <JournalView spots={spots} mode={currentMode} />
         )}
+          </div>
         </div>
       </main>
-      <TabBar tab={tab} onChange={setTab} />
+      <TabBar tab={tab} onChange={changeTab} />
     </div>
   )
 }
