@@ -142,7 +142,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
       <select value={spotId} onChange={(e) => setSpotId(Number(e.target.value))}>
         {spots.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select>
-      <div className="seg">
+      <div className="seg full">
         <button type="button" className={mode === 'bord' ? 'on' : ''} onClick={() => setMode('bord')}>Bord de mer</button>
         <button type="button" className={mode === 'plongee' ? 'on' : ''} onClick={() => setMode('plongee')}>Sous-marine</button>
       </div>

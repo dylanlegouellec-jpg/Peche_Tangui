@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App'
 import './index.css'
+import { installDiagnostics } from './lib/diagnostics'
+
+installDiagnostics()
 
 // Mise à jour : l'appli cherche une nouvelle version au retour au premier plan et toutes les 30 min.
 registerSW({
@@ -14,6 +17,22 @@ registerSW({
     setInterval(check, 30 * 60 * 1000)
   },
 })
+
+// Quand une nouvelle version prend le relais, on recharge (sauf si tu es en train de saisir du texte).
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller
+  let reloading = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return
+    const typing = () => document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement
+    const reload = () => {
+      reloading = true
+      location.reload()
+    }
+    if (typing()) document.addEventListener('focusout', reload, { once: true })
+    else reload()
+  })
+}
 
 // Comportement « vraie appli » : pas de zoom, pas de menu contextuel, pas de pincement.
 // iOS ignore user-scalable=no, donc on bloque aussi les gestes à la main.

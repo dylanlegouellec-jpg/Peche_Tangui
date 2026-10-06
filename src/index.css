@@ -175,3 +175,28 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 img { -webkit-user-drag: none; user-select: none; }
 .days, .spark { overscroll-behavior-x: contain; }
+
+/* Diagnostic */
+.diag .kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .88rem; } .diag .kv:first-of-type { border-top: 0; }
+.diag .kv span:last-child { text-align: right; word-break: break-word; min-width: 0; }
+.big-stat { font-size: 2rem; font-weight: 800; margin: 4px 0 8px; } .big-stat .muted { font-size: .85rem; font-weight: 400; }
+.console { margin-top: 8px; max-height: 300px; overflow-y: auto; background: #050d14; color: #cfe3f2; border-radius: 10px; padding: 8px; font: .72rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; -webkit-user-select: text; user-select: text; overscroll-behavior: contain; }
+.log { white-space: pre-wrap; word-break: break-word; } .log.error { color: #ff8a86; } .log.warn { color: #f5c04b; } .log.info { color: #7fd0ff; }
+.diag { -webkit-user-select: text; user-select: text; }
+
+/* Calendrier (feuille du bas) */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; justify-content: center; animation: fade-in .2s ease both; }
+.sheet { width: min(100%, 480px); background: var(--card); border-radius: 22px 22px 0 0; padding: 10px 16px calc(env(safe-area-inset-bottom) + 16px); animation: sheet-up .45s cubic-bezier(.34, 1.4, .5, 1) both; max-height: 90dvh; overflow-y: auto; }
+.grabber { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 10px; }
+@keyframes fade-in { from { opacity: 0; } } @keyframes sheet-up { from { transform: translateY(100%); } }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 10px 0; }
+.cal-h { text-align: center; color: var(--muted); font-size: .75rem; padding: 4px 0; }
+.cal-d { position: relative; aspect-ratio: 1; padding: 0; border-radius: 12px; border: 0; background: none; font-size: 1rem; }
+.cal-d:disabled { opacity: .25; } .cal-d.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cal-d.on { background: var(--accent); color: #fff; }
+.cal-d i { position: absolute; left: 50%; bottom: 5px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; } .cal-d i.plan { background: var(--muted); opacity: .6; }
+.cal-d i.good { background: var(--good); } .cal-d i.mid { background: var(--mid); } .cal-d i.bad { background: var(--bad); }
+.day.cal { justify-content: center; color: var(--muted); } .day.cal svg { width: 22px; height: 22px; }
+.plan .kv, .card .kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .92rem; } .card .kv:first-of-type { border-top: 0; }
+.seg.full { display: flex; width: 100%; } .seg.full button { flex: 1; }
+@media (prefers-reduced-motion: reduce) { .sheet, .sheet-backdrop { animation: none; } }

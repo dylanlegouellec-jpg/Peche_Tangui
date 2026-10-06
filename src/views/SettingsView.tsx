@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar } from '../components/Avatar'
-import { IconCloud, IconDownload, IconMonitor, IconMoon, IconPalette, IconShield, IconSliders, IconSun } from '../components/icons'
+import { IconCloud, IconDownload, IconMonitor, IconMoon, IconPalette, IconShield, IconSliders, IconSun, IconTerminal } from '../components/icons'
 import { db } from '../lib/db'
 import { exportBackup, saveSettings } from '../lib/store'
 import { getSyncState, subscribeSync } from '../lib/sync'
 import type { Mode, Settings, Spot, Theme, WindUnit } from '../lib/types'
 import { AccountCard } from './AccountCard'
+import { DiagnosticView } from './DiagnosticView'
 import { ProfileCard } from './ProfileCard'
 
-type Page = 'profile' | 'appearance' | 'fishing' | 'account' | 'data' | 'about'
+type Page = 'profile' | 'appearance' | 'fishing' | 'account' | 'data' | 'about' | 'diagnostic'
 
 function Seg<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
@@ -56,7 +57,7 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
   }
 
   if (page) {
-    const titles: Record<Page, string> = { profile: 'Profil', appearance: 'Apparence', fishing: 'Pêche & unités', account: 'Compte & synchronisation', data: 'Données & sauvegarde', about: 'À propos & sécurité' }
+    const titles: Record<Page, string> = { profile: 'Profil', appearance: 'Apparence', fishing: 'Pêche & unités', account: 'Compte & synchronisation', data: 'Données & sauvegarde', about: 'À propos & sécurité', diagnostic: 'Diagnostic' }
     return (
       <section className="subpage">
         <button className="back" onClick={() => setPage(null)}>‹ Réglages</button>
@@ -116,6 +117,7 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
             </div>
           </div>
         )}
+        {page === 'diagnostic' && <DiagnosticView />}
         {page === 'about' && (
           <div className="card">
             <p>Prévisions météo et marines : <strong>Open-Meteo</strong>.</p>
@@ -150,6 +152,7 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
 
       <Group title="Informations">
         <Row icon={<IconShield />} color="#c75b6a" label="À propos & sécurité" onClick={() => setPage('about')} />
+        <Row icon={<IconTerminal />} color="#6a7f93" label="Diagnostic" hint={`v ${__COMMIT__}`} onClick={() => setPage('diagnostic')} />
       </Group>
     </section>
   )

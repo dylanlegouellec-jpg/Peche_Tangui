@@ -32,6 +32,7 @@ const set = (p: Partial<SyncState>) => {
   listeners.forEach((l) => l())
 }
 export const getSyncState = () => state
+export const getSyncDebug = () => ({ cursor: Number(read(LS.cursor)) || null, lastPush: Number(read(LS.lastPush)) || null })
 export const subscribeSync = (l: () => void) => (listeners.add(l), () => void listeners.delete(l))
 
 async function api<T>(path: string, body: unknown, method = 'POST'): Promise<T> {
@@ -148,8 +149,10 @@ export async function syncNow() {
     write(LS.cursor, String(res.cursor))
     write(LS.lastPush, String(startedAt))
     write(LS.lastSync, String(Date.now()))
+    console.info(`Synchro ok : ${spots.length} spot(s) et ${trips.length} sortie(s) envoyés, ${res.spots.length + res.trips.length} reçu(s)`)
     set({ status: 'idle', last: Date.now() })
   } catch (e) {
+    console.warn('Synchro échouée :', e)
     set({ status: navigator.onLine ? 'error' : 'offline', error: e instanceof Error ? e.message : String(e) })
   } finally {
     running = false

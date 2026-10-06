@@ -34,6 +34,8 @@ export interface Forecast {
   spotId: number
   lat?: number
   lon?: number
+  /** Vrai si la partie mer (houle, marées) n'a pas pu être chargée : on retente vite. */
+  noSea?: boolean
   fetchedAt: number
   hours: HourPoint[]
   sun: Sun[]

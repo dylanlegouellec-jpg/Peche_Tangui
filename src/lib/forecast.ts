@@ -24,7 +24,7 @@ export async function loadForecast(spot: Spot, force = false): Promise<Loaded | 
   const remember = (l: Loaded) => (memory.set(id, l), l)
   if (!force) {
     const cached = memory.get(id)?.forecast ?? (await db.forecasts.get(id))
-    if (cached && cached.lat === spot.lat && cached.lon === spot.lon && Date.now() - cached.fetchedAt < FRESH_MS) return remember({ forecast: cached, offline: false })
+    if (cached && cached.lat === spot.lat && cached.lon === spot.lon && Date.now() - cached.fetchedAt < (cached.noSea ? 60_000 : FRESH_MS)) return remember({ forecast: cached, offline: false })
   }
   try {
     // Météo : jusqu'à 16 jours. Mer (houle, marées) : 8 jours maximum chez Open-Meteo.
@@ -52,10 +52,12 @@ export async function loadForecast(spot: Spot, force = false): Promise<Loaded | 
       seaLevel: mh?.sea_level_height_msl?.[i] ?? null,
     }))
     const sun = meteo.daily.sunrise.map((s: number, i: number) => ({ sunrise: s, sunset: meteo.daily.sunset[i] }))
-    const forecast: Forecast = { spotId: id, lat: spot.lat, lon: spot.lon, fetchedAt: Date.now(), hours, sun }
+    const forecast: Forecast = { spotId: id, lat: spot.lat, lon: spot.lon, fetchedAt: Date.now(), hours, sun, noSea: !marine }
     await db.forecasts.put(forecast)
+    console.info(`Prévisions chargées pour « ${spot.name} » (${hours.length} h${marine ? '' : ', sans données mer'})`)
     return remember({ forecast, offline: false })
-  } catch {
+  } catch (e) {
+    console.warn('Prévisions : échec du chargement, repli sur le cache.', e)
     const cached = await db.forecasts.get(id)
     return cached ? remember({ forecast: cached, offline: true }) : null
   }

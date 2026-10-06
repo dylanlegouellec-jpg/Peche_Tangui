@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Calendar } from '../components/Calendar'
+import { PlanCard } from '../components/PlanCard'
 import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
 import { estimatedCoef, moonLabel } from '../lib/moon'
+import { noonOf } from '../lib/astro'
 import { bestWindows, dayKey, dayLabel, scoreSeries } from '../lib/scoring'
 import type { Mode, Spot, WindUnit } from '../lib/types'
 
@@ -22,6 +25,9 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   const [data, setData] = useState<Loaded | null | undefined>(() => peekForecast(spot?.id))
   const [selected, setSelected] = useState<number | null>(null)
   const [day, setDay] = useState<string | null>(null)
+  const [calendar, setCalendar] = useState(false)
+  const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const pressed = useRef(false)
   const [refreshing, setRefreshing] = useState(false)
   const sparkRef = useRef<HTMLDivElement>(null)
   const dataRef = useRef(data)
@@ -65,7 +71,10 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   const todayKey = dayKey(now)
   // 7 jours à partir d'aujourd'hui ; les créneaux déjà passés d'aujourd'hui sont ignorés.
   const windows = useMemo(() => bestWindows(all.filter((s) => s.ts >= now - 3600 && dayKey(s.ts) >= todayKey)), [all, now, todayKey])
-  const activeDay = day && windows.some((w) => w.key === day) ? day : todayKey
+  const activeDay = day && day >= todayKey ? day : todayKey
+  const inRange = windows.some((w) => w.key === activeDay)
+  const scores = useMemo(() => Object.fromEntries(windows.map((w) => [w.key, w.avg])), [windows])
+  const lastForecast = windows[windows.length - 1]?.key ?? todayKey
   const dayHours = all.filter((s) => dayKey(s.ts) === activeDay)
   const dayWindow = windows.find((w) => w.key === activeDay)
   const bars = dayHours
@@ -82,10 +91,25 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   // Au-delà de 8 jours, Open-Meteo ne prévoit plus ni houle ni marées : le score est partiel.
   const seaDays = useMemo(() => new Set((data?.forecast.hours ?? []).filter((h) => h.wave != null).map((h) => dayKey(h.ts))), [data])
   const partial = (key: string) => !seaDays.has(key)
+  const daysAhead = (key: string) => Math.round((noonOf(key) - noonOf(todayKey)) / 86400)
   const dayTides = tides.filter((t) => dayKey(t.ts) === activeDay)
   const chooseDay = (key: string) => {
     setDay(key)
     setSelected(null)
+  }
+  // Appui long sur un jour : ouvre le calendrier.
+  const press = {
+    onPointerDown: () => {
+      pressed.current = false
+      pressTimer.current = setTimeout(() => {
+        pressed.current = true
+        navigator.vibrate?.(15)
+        setCalendar(true)
+      }, 450)
+    },
+    onPointerUp: () => clearTimeout(pressTimer.current),
+    onPointerLeave: () => clearTimeout(pressTimer.current),
+    onPointerCancel: () => clearTimeout(pressTimer.current),
   }
 
   return (
@@ -98,7 +122,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
             </option>
           ))}
         </select>
-        <div className="seg" role="group" aria-label="Type de sortie">
+        <div className="seg full" role="group" aria-label="Type de sortie">
           <button className={mode === 'bord' ? 'on' : ''} onClick={() => setMode('bord')}>
             Bord de mer
           </button>
@@ -111,25 +135,39 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
       {data === undefined && <p className="muted">Chargement des prévisions…</p>}
       {data === null && <p className="card warn">Impossible de charger les prévisions et aucune donnée en cache. Reconnecte-toi une fois pour les télécharger.</p>}
 
-      {data && focus && (
+      {data && (
         <>
           {data.offline && <p className="card warn">Mode hors ligne : prévisions du {new Date(data.forecast.fetchedAt).toLocaleString('fr-FR')}.</p>}
 
           <div className="days" role="tablist" aria-label="Jour">
             {windows.map((w, i) => (
-              <button key={w.key} role="tab" aria-selected={w.key === activeDay} className={`day ${w.key === activeDay ? 'on' : ''} ${partial(w.key) ? 'partial' : ''}`} onClick={() => chooseDay(w.key)}>
+              <button key={w.key} role="tab" aria-selected={w.key === activeDay} className={`day ${w.key === activeDay ? 'on' : ''} ${partial(w.key) ? 'partial' : ''}`} {...press} onClick={() => (pressed.current ? (pressed.current = false) : chooseDay(w.key))}>
                 <span className="dw">{i === 0 ? 'Auj.' : new Date(w.start * 1000).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'Europe/Paris' }).replace('.', '')}</span>
                 <span className="dn">{new Date(w.start * 1000).toLocaleDateString('fr-FR', { day: 'numeric', timeZone: 'Europe/Paris' })}</span>
                 <b className={tone(w.avg)}>{w.avg}</b>
               </button>
             ))}
+            {!inRange && (
+              <button role="tab" aria-selected className="day on partial" {...press} onClick={() => setCalendar(true)}>
+                <span className="dw">{new Date(noonOf(activeDay) * 1000).toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '')}</span>
+                <span className="dn">{Number(activeDay.slice(8))}</span>
+                <b>plan</b>
+              </button>
+            )}
+            <button className="day cal" onClick={() => setCalendar(true)} aria-label="Ouvrir le calendrier">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+              <span className="dw">Date</span>
+            </button>
           </div>
 
+          {inRange && focus ? (
           <div className="today-grid">
             <div className="col">
           {partial(activeDay) && (
             <p className="card warn small">
-              Prévision lointaine : au-delà de 8 jours, la houle et les marées ne sont pas prévues. Le score ne tient compte que du vent, de la pression, de la lumière et d’un coefficient estimé, c’est une simple tendance.
+              {daysAhead(activeDay) <= 7
+                ? 'La houle et les marées sont indisponibles pour le moment (réseau). Touche « Actualiser » dans un instant : en attendant, le score est partiel.'
+                : 'Prévision lointaine : au-delà de 8 jours, la houle et les marées ne sont pas prévues. Le score ne tient compte que du vent, de la pression, de la lumière et d’un coefficient estimé, c’est une simple tendance.'}
             </p>
           )}
 
@@ -237,7 +275,24 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
           </div>
             </div>
           </div>
+          ) : (
+            <PlanCard dayKey={activeDay} spot={spot} mode={mode} />
+          )}
         </>
+      )}
+
+      {calendar && (
+        <Calendar
+          value={activeDay}
+          min={todayKey}
+          lastForecast={lastForecast}
+          scores={scores}
+          onPick={(k) => {
+            chooseDay(k)
+            setCalendar(false)
+          }}
+          onClose={() => setCalendar(false)}
+        />
       )}
     </section>
   )
