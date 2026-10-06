@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { db } from '../lib/db'
 import { saveSettings } from '../lib/store'
 import { AccountCard } from './AccountCard'
+import { ProfileCard } from './ProfileCard'
 import type { Mode, Settings, Spot, Theme, WindUnit } from '../lib/types'
 
 function Seg<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
@@ -28,6 +29,7 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
   }
   return (
     <section>
+      <ProfileCard settings={settings} />
       <AccountCard />
       <div className="card">
         <h3>Affichage</h3>

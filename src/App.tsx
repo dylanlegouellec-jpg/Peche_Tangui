@@ -1,5 +1,6 @@
 import { liveQuery } from 'dexie'
 import { useEffect, useState } from 'react'
+import { Avatar } from './components/Avatar'
 import { TabBar, type Tab } from './components/TabBar'
 import { loadSettings, seedSpots } from './lib/db'
 import { liveSpots } from './lib/store'
@@ -45,6 +46,9 @@ export default function App() {
       <header>
         <h1>Pêche</h1>
         <span className="muted small">Morbihan</span>
+        <button className="avatar-btn" onClick={() => setTab('settings')} aria-label="Profil et réglages">
+          <Avatar settings={settings} size={32} />
+        </button>
       </header>
       <main className="scroll">
         <div className="app">

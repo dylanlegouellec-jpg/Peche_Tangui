@@ -131,16 +131,17 @@ export async function syncNow() {
       if (res.settings && (mine?.updatedAt ?? 0) < res.settings.updatedAt) await db.settings.put({ key: 'main', value: res.settings.data, updatedAt: res.settings.updatedAt })
     })
 
-    // Photos des sorties reçues d'un autre appareil.
-    for (const t of await db.trips.toArray()) {
-      if (t.deleted) continue
-      for (const uid of t.photoUids) {
-        if (await db.photos.get(uid)) continue
-        const token = read(LS.token)
-        const r = await fetch(`/api/photo?uid=${encodeURIComponent(uid)}`, { headers: { Authorization: `Bearer ${token}` } })
-        if (r.ok) await db.photos.put({ uid, tripUid: t.uid, blob: await r.blob(), uploaded: 1 })
-      }
+    // Photos reçues d'un autre appareil : sorties et photo de profil.
+    const fetchPhoto = async (uid: string, tripUid: string) => {
+      if (await db.photos.get(uid)) return
+      const r = await fetch(`/api/photo?uid=${encodeURIComponent(uid)}`, { headers: { Authorization: `Bearer ${read(LS.token)}` } })
+      if (r.ok) await db.photos.put({ uid, tripUid, blob: await r.blob(), uploaded: 1 })
     }
+    for (const t of await db.trips.toArray()) {
+      if (!t.deleted) for (const uid of t.photoUids) await fetchPhoto(uid, t.uid)
+    }
+    const avatarUid = ((await db.settings.get('main'))?.value as { avatarUid?: string } | undefined)?.avatarUid
+    if (avatarUid) await fetchPhoto(avatarUid, 'profile')
 
     write(LS.cursor, String(res.cursor))
     write(LS.lastPush, String(startedAt))

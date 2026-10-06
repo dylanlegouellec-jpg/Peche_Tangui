@@ -25,6 +25,15 @@ export async function saveSettings(patch: Partial<Settings>) {
   touch()
 }
 
+/** Remplace la photo de profil (nouvel identifiant à chaque fois : les photos ne changent jamais une fois envoyées). */
+export async function setAvatar(blob: Blob) {
+  const old = (await loadSettings()).avatarUid
+  const uid = crypto.randomUUID()
+  await db.photos.add({ uid, tripUid: 'profile', blob, uploaded: 0 })
+  if (old) await db.photos.delete(old)
+  await saveSettings({ avatarUid: uid })
+}
+
 export interface NewTrip {
   date: number
   spot: Spot

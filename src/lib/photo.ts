@@ -28,3 +28,14 @@ export async function shrinkPhoto(file: File): Promise<Blob> {
   bmp.close()
   return best!
 }
+
+/** Photo de profil : recadrée au carré au centre, 320 px, JPEG léger (~20 Ko). */
+export async function shrinkAvatar(file: File, size = 320): Promise<Blob> {
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  const side = Math.min(bmp.width, bmp.height)
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  canvas.getContext('2d')!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size)
+  bmp.close()
+  return encode(canvas, 0.8)
+}

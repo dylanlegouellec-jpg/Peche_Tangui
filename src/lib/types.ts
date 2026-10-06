@@ -89,6 +89,10 @@ export interface Settings {
   defaultSpotUid?: string
   /** Opacité du fond de la barre d'onglets, en % (20–100). */
   tabOpacity: number
+  firstName?: string
+  lastName?: string
+  /** Identifiant de la photo de profil (table photos). */
+  avatarUid?: string
 }
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 72 }
