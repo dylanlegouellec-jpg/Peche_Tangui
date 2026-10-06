@@ -34,9 +34,9 @@ export function SpeciesView({ mode }: { mode: Mode }) {
       </select>
       <p className="muted small">Morbihan · {mode === 'bord' ? 'pêche du bord' : 'chasse sous-marine'}. Données de départ indicatives, à affiner avec tes propres prises. Vérifie toujours tailles minimales et réglementation en vigueur.</p>
       <h3 className="sec">Espèces ciblées</h3>
-      {main.map((x) => <Item key={x.s.name} {...x} />)}
+      <div className="cols-2">{main.map((x) => <Item key={x.s.name} {...x} />)}</div>
       <h3 className="sec">Autres espèces</h3>
-      {other.map((x) => <Item key={x.s.name} {...x} />)}
+      <div className="cols-2">{other.map((x) => <Item key={x.s.name} {...x} />)}</div>
     </section>
   )
 }

@@ -50,6 +50,7 @@ export function SpotsView({ spots }: { spots: Spot[] }) {
         </div>
         {error && <p className="warn small">{error}</p>}
       </form>
+      <div className="cols-2">
       {spots.map((s) => (
         <div className="card" key={s.id}>
           <div className="row between">
@@ -65,6 +66,6 @@ export function SpotsView({ spots }: { spots: Spot[] }) {
           {s.notes && <div className="warn small">{s.notes}</div>}
         </div>
       ))}
-    </section>
-  )
+      </div>
+    </section>  )
 }

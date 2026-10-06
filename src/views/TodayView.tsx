@@ -122,6 +122,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
             ))}
           </div>
 
+          <div className="today-grid">
+            <div className="col">
           <div className={`card score ${tone(focus.score)}`}>
             <div className="big">{focus.score}</div>
             <div>
@@ -159,6 +161,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
             ))}
           </div>
 
+            </div>
+            <div className="col">
           <div className="card">
             <h3>Prévisions sur 7 jours</h3>
             <p className="muted small">Meilleur créneau de 2 h de chaque jour. Touche un jour pour le détailler.</p>
@@ -221,6 +225,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
             <p className="muted small">
               {moonLabel(focus.ts)} · coefficient estimé ≈ {estimatedCoef(focus.ts)} (approximation, pas la valeur officielle du SHOM).
             </p>
+          </div>
+            </div>
           </div>
         </>
       )}

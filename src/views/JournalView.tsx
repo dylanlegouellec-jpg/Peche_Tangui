@@ -83,6 +83,7 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
           {trips.length > 0 && <button onClick={exportBackup}>Sauvegarde</button>}
         </div>
       )}
+      <div className="cols-2">
       {trips.map((t) => (
         <div className="card" key={t.id}>
           <div className="row between">
@@ -97,6 +98,7 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
           </div>
         </div>
       ))}
+      </div>
       {!adding && trips.length === 0 && <p className="muted">Aucune sortie pour l’instant. Chaque sortie enregistrée garde aussi les conditions du moment, pour apprendre ce qui marche chez toi.</p>}
     </section>
   )
