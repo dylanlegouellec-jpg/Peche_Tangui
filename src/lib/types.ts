@@ -71,3 +71,15 @@ export interface Trip {
   photos: Blob[]
   snapshot?: { wind: number | null; wave: number | null; seaTemp: number | null; pressure: number | null; score: number | null }
 }
+
+export type Theme = 'auto' | 'dark' | 'light'
+export type WindUnit = 'kmh' | 'kt'
+
+export interface Settings {
+  theme: Theme
+  windUnit: WindUnit
+  defaultMode: Mode
+  defaultSpotId?: number
+}
+
+export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord' }

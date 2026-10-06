@@ -1,46 +1,39 @@
 import { liveQuery } from 'dexie'
 import { useEffect, useState } from 'react'
-import { db, seedSpots } from './lib/db'
-import type { Mode, Spot } from './lib/types'
+import { TabBar, type Tab } from './components/TabBar'
+import { db, loadSettings, seedSpots } from './lib/db'
+import { DEFAULT_SETTINGS, type Mode, type Settings, type Spot } from './lib/types'
 import { JournalView } from './views/JournalView'
+import { SettingsView } from './views/SettingsView'
 import { SpeciesView } from './views/SpeciesView'
 import { SpotsView } from './views/SpotsView'
 import { TodayView } from './views/TodayView'
 
-type Tab = 'today' | 'species' | 'journal' | 'spots'
-const TABS: [Tab, string][] = [
-  ['today', '🌊 Aujourd’hui'],
-  ['species', '🐟 Espèces'],
-  ['journal', '📓 Carnet'],
-  ['spots', '📍 Spots'],
-]
-
-function stored<T extends string>(key: string, fallback: T): T {
-  try {
-    return (localStorage.getItem(key) as T) || fallback
-  } catch {
-    return fallback
-  }
-}
-const save = (k: string, v: string) => {
-  try {
-    localStorage.setItem(k, v)
-  } catch {
-    /* stockage indisponible */
-  }
-}
-
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [spots, setSpots] = useState<Spot[]>([])
-  const [spotId, setSpotId] = useState<number | undefined>(Number(stored('spot', '')) || undefined)
-  const [mode, setMode] = useState<Mode>(stored<Mode>('mode', 'bord'))
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const [spotId, setSpotId] = useState<number>()
+  const [mode, setMode] = useState<Mode>()
 
   useEffect(() => {
     seedSpots()
-    const sub = liveQuery(() => db.spots.toArray()).subscribe(setSpots)
-    return () => sub.unsubscribe()
+    const a = liveQuery(() => db.spots.toArray()).subscribe(setSpots)
+    const b = liveQuery(loadSettings).subscribe(setSettings)
+    return () => {
+      a.unsubscribe()
+      b.unsubscribe()
+    }
   }, [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (settings.theme === 'auto') root.removeAttribute('data-theme')
+    else root.setAttribute('data-theme', settings.theme)
+  }, [settings.theme])
+
+  const currentMode = mode ?? settings.defaultMode
+  const currentSpot = spotId ?? settings.defaultSpotId
 
   return (
     <div className="app">
@@ -49,25 +42,21 @@ export default function App() {
         <span className="muted small">Morbihan</span>
       </header>
       <main>
-        {spots.length === 0 && tab !== 'spots' ? (
+        {tab === 'settings' ? (
+          <SettingsView settings={settings} spots={spots} />
+        ) : tab === 'spots' ? (
+          <SpotsView spots={spots} />
+        ) : spots.length === 0 ? (
           <p className="muted">Ajoute un spot pour commencer.</p>
         ) : tab === 'today' ? (
-          <TodayView spots={spots} spotId={spotId} setSpotId={(id) => { setSpotId(id); save('spot', String(id)) }} mode={mode} setMode={(m) => { setMode(m); save('mode', m) }} />
+          <TodayView spots={spots} spotId={currentSpot} setSpotId={setSpotId} mode={currentMode} setMode={setMode} windUnit={settings.windUnit} />
         ) : tab === 'species' ? (
-          <SpeciesView mode={mode} />
-        ) : tab === 'journal' ? (
-          <JournalView spots={spots} mode={mode} />
+          <SpeciesView mode={currentMode} />
         ) : (
-          <SpotsView spots={spots} />
+          <JournalView spots={spots} mode={currentMode} />
         )}
       </main>
-      <nav>
-        {TABS.map(([t, label]) => (
-          <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-            {label}
-          </button>
-        ))}
-      </nav>
+      <TabBar tab={tab} onChange={setTab} />
     </div>
   )
 }

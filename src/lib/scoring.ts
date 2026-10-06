@@ -1,6 +1,8 @@
 import { estimatedCoef } from './moon'
 import { tideFlow } from './forecast'
-import type { Factor, Forecast, HourPoint, HourScore, Mode, Tide } from './types'
+import type { Factor, Forecast, HourPoint, HourScore, Mode, Tide, WindUnit } from './types'
+
+export const fmtWind = (kmh: number, unit: WindUnit) => (unit === 'kt' ? `${Math.round(kmh / 1.852)} nds` : `${Math.round(kmh)} km/h`)
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v))
 /** Interpolation linéaire : `good` → 1, `bad` → 0. */
@@ -29,7 +31,7 @@ function past48(i: number, hours: HourPoint[]) {
   }
 }
 
-export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mode): HourScore {
+export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mode, unit: WindUnit = 'kmh'): HourScore {
   const hours = forecast.hours
   const h = hours[i]
   const factors: Factor[] = []
@@ -43,7 +45,7 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
   const hour = Number(new Date(h.ts * 1000).toLocaleString('fr-FR', { hour: '2-digit', hour12: false, timeZone: 'Europe/Paris' }))
 
   if (mode === 'bord') {
-    if (windEff != null) add('Vent', ramp(windEff, 12, 45), 2, `${Math.round(h.wind!)} km/h (rafales ${Math.round(h.gust ?? 0)})`)
+    if (windEff != null) add('Vent', ramp(windEff, 12, 45), 2, `${fmtWind(h.wind!, unit)} (rafales ${fmtWind(h.gust ?? 0, unit)})`)
     if (h.wave != null) {
       const v = h.wave < 0.4 ? 0.8 : h.wave <= 1.2 ? 1 : ramp(h.wave, 1.2, 3)
       add('Houle', v, 2, `${h.wave.toFixed(1)} m`)
@@ -60,7 +62,7 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
       add('Houle', ramp(h.wave, 0.3, 1.5), 2, `${h.wave.toFixed(1)} m`)
       if (h.wave > 1) warnings.push('Mer formée : sortie déconseillée.')
     }
-    if (windEff != null) add('Vent', ramp(windEff, 10, 35), 2, `${Math.round(h.wind!)} km/h (rafales ${Math.round(h.gust ?? 0)})`)
+    if (windEff != null) add('Vent', ramp(windEff, 10, 35), 2, `${fmtWind(h.wind!, unit)} (rafales ${fmtWind(h.gust ?? 0, unit)})`)
     if (windEff != null && windEff > 30) warnings.push('Vent fort : mise à l’eau et retour difficiles.')
     if (flow != null) add('Courant', 1 - flow, 2, flow < 0.3 ? 'Étale, idéal' : flow > 0.8 ? 'Courant fort' : 'Courant modéré')
     const p = past48(i, hours)
@@ -79,10 +81,10 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
   return { ts: h.ts, score, factors, warnings }
 }
 
-export function scoreSeries(forecast: Forecast, tides: Tide[], mode: Mode, fromTs: number): HourScore[] {
+export function scoreSeries(forecast: Forecast, tides: Tide[], mode: Mode, fromTs: number, unit: WindUnit = 'kmh'): HourScore[] {
   const out: HourScore[] = []
   forecast.hours.forEach((h, i) => {
-    if (h.ts >= fromTs - 3600) out.push(scoreHour(i, forecast, tides, mode))
+    if (h.ts >= fromTs - 3600) out.push(scoreHour(i, forecast, tides, mode, unit))
   })
   return out
 }

@@ -1,10 +1,11 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Forecast, Spot, Trip } from './types'
+import { DEFAULT_SETTINGS, type Forecast, type Settings, type Spot, type Trip } from './types'
 
 export const db = new Dexie('peche-tangui') as Dexie & {
   spots: EntityTable<Spot, 'id'>
   trips: EntityTable<Trip, 'id'>
   forecasts: EntityTable<Forecast, 'spotId'>
+  settings: EntityTable<{ key: string; value: unknown }, 'key'>
 }
 
 db.version(1).stores({
@@ -12,16 +13,31 @@ db.version(1).stores({
   trips: '++id, date, spotId',
   forecasts: 'spotId',
 })
+db.version(2).stores({ settings: 'key' })
 
-// Spots d'exemple dans le Morbihan, à remplacer par les vrais coins.
-const EXAMPLES: Spot[] = [
-  { name: 'Quiberon – Port-Maria', lat: 47.4833, lon: -3.1167, example: true },
-  { name: 'Carnac – plage', lat: 47.5667, lon: -3.0667, example: true },
-  { name: 'Port-Louis', lat: 47.7083, lon: -3.3544, example: true },
-  { name: 'Port-Navalo', lat: 47.5486, lon: -2.9172, example: true },
-  { name: 'Île de Houat', lat: 47.3917, lon: -2.9553, example: true },
+// Spots de départ (Morbihan). Coordonnées approximatives : à ajuster sur place avec « Placer ici ».
+const DEFAULT_SPOTS: Spot[] = [
+  { name: 'Roche du Maguero', lat: 47.69, lon: -3.27, notes: 'Position approximative, à corriger sur place.' },
+  { name: 'Port d’Étel', lat: 47.6577, lon: -3.201 },
+  { name: 'Portivy', lat: 47.5294, lon: -3.1444 },
 ]
 
+export async function loadSettings(): Promise<Settings> {
+  const row = await db.settings.get('main')
+  return { ...DEFAULT_SETTINGS, ...(row?.value as Partial<Settings> | undefined) }
+}
+
+export async function saveSettings(patch: Partial<Settings>) {
+  await db.settings.put({ key: 'main', value: { ...(await loadSettings()), ...patch } })
+}
+
+/** Remplace les spots d'exemple de la première version par les vrais coins, une seule fois. */
 export async function seedSpots() {
-  if ((await db.spots.count()) === 0) await db.spots.bulkAdd(EXAMPLES)
+  if ((await db.settings.get('seeded'))?.value) return
+  const spots = await db.spots.toArray()
+  if (spots.every((s) => s.example)) {
+    await db.spots.clear()
+    await db.spots.bulkAdd(DEFAULT_SPOTS)
+  }
+  await db.settings.put({ key: 'seeded', value: true })
 }

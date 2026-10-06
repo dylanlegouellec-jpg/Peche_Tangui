@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { findTides, loadForecast } from '../lib/forecast'
 import { estimatedCoef, moonLabel } from '../lib/moon'
 import { bestWindows, scoreSeries } from '../lib/scoring'
-import type { Forecast, Mode, Spot } from '../lib/types'
+import type { Forecast, Mode, Spot, WindUnit } from '../lib/types'
 
 const hhmm = (ts: number) => new Date(ts * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
 const dayShort = (ts: number) => new Date(ts * 1000).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'Europe/Paris' })
@@ -14,9 +14,10 @@ interface Props {
   setSpotId: (id: number) => void
   mode: Mode
   setMode: (m: Mode) => void
+  windUnit: WindUnit
 }
 
-export function TodayView({ spots, spotId, setSpotId, mode, setMode }: Props) {
+export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }: Props) {
   const spot = spots.find((s) => s.id === spotId) ?? spots[0]
   const [data, setData] = useState<{ forecast: Forecast; offline: boolean } | null | undefined>(undefined)
   const [selected, setSelected] = useState<number | null>(null)
@@ -33,7 +34,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode }: Props) {
 
   const now = Math.floor(Date.now() / 1000)
   const tides = useMemo(() => (data ? findTides(data.forecast.hours) : []), [data])
-  const series = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, now) : []), [data, tides, mode, now])
+  const series = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, now, windUnit) : []), [data, tides, mode, now, windUnit])
   const windows = useMemo(() => bestWindows(series), [series])
   const current = series[0]
   const focus = series.find((s) => s.ts === selected) ?? current
