@@ -95,7 +95,7 @@ export interface Settings {
   avatarUid?: string
 }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 72 }
+export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 92 }
 
 export interface PhotoRow {
   uid: string

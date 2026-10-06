@@ -65,3 +65,14 @@ export async function photoBlobs(uids: string[]): Promise<Blob[]> {
   const rows = await db.photos.bulkGet(uids)
   return rows.flatMap((r) => (r ? [r.blob] : []))
 }
+
+/** Télécharge toutes les données (spots, sorties, photos incluses) dans un fichier JSON. */
+export async function exportBackup() {
+  const toUrl = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(b) })
+  const [spots, trips] = await Promise.all([liveSpots(), liveTrips()])
+  const rows = await Promise.all(trips.map(async (t) => ({ ...t, photos: await Promise.all((await photoBlobs(t.photoUids)).map(toUrl)) })))
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ spots, trips: rows, settings: await loadSettings() }, null, 1)], { type: 'application/json' }))
+  a.download = `peche-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+}

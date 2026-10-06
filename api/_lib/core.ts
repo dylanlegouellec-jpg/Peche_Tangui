@@ -7,6 +7,7 @@ export const db = () => (pool ??= new pg.Pool({ connectionString: process.env.DA
 
 const SCHEMA = `
 create table if not exists app_user (id int primary key check (id = 1), pass_hash text not null);
+alter table app_user add column if not exists email text;
 create table if not exists spots (uid text primary key, data jsonb not null, updated_at bigint not null, synced_at bigint not null, deleted boolean not null default false);
 create table if not exists trips (uid text primary key, data jsonb not null, updated_at bigint not null, synced_at bigint not null, deleted boolean not null default false);
 create table if not exists photos (uid text primary key, trip_uid text not null, data bytea not null);

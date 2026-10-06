@@ -1,7 +1,7 @@
 import { db } from './db'
 import type { Spot, Trip } from './types'
 
-const LS = { token: 'peche-token', cursor: 'peche-cursor', lastPush: 'peche-last-push', lastSync: 'peche-last-sync' }
+const LS = { token: 'peche-token', email: 'peche-email', cursor: 'peche-cursor', lastPush: 'peche-last-push', lastSync: 'peche-last-sync' }
 const read = (k: string) => {
   try {
     return localStorage.getItem(k)
@@ -20,11 +20,12 @@ const write = (k: string, v: string | null) => {
 
 export interface SyncState {
   loggedIn: boolean
+  email: string | null
   status: 'idle' | 'syncing' | 'error' | 'offline'
   last: number | null
   error?: string
 }
-let state: SyncState = { loggedIn: !!read(LS.token), status: 'idle', last: Number(read(LS.lastSync)) || null }
+let state: SyncState = { loggedIn: !!read(LS.token), email: read(LS.email), status: 'idle', last: Number(read(LS.lastSync)) || null }
 const listeners = new Set<() => void>()
 const set = (p: Partial<SyncState>) => {
   state = { ...state, ...p }
@@ -42,22 +43,23 @@ async function api<T>(path: string, body: unknown, method = 'POST'): Promise<T> 
   })
   if (r.status === 401 && token) {
     write(LS.token, null)
-    set({ loggedIn: false, status: 'idle' })
+    set({ loggedIn: false, email: null, status: 'idle' })
   }
   if (!r.ok) throw new Error(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? `Erreur ${r.status}`)
   return r.json()
 }
 
-export async function authenticate(action: 'login' | 'setup', password: string, code?: string) {
-  const { token } = await api<{ token: string }>('auth', { action, password, code })
-  write(LS.token, token)
-  set({ loggedIn: true, error: undefined })
+export async function authenticate(action: 'login' | 'setup', email: string, password: string, code?: string) {
+  const res = await api<{ token: string; email?: string }>('auth', { action, email, password, code })
+  write(LS.token, res.token)
+  write(LS.email, res.email ?? email)
+  set({ loggedIn: true, email: res.email ?? email, error: undefined })
   await syncNow()
 }
 
 export function logout() {
   Object.values(LS).forEach((k) => write(k, null))
-  set({ loggedIn: false, status: 'idle', last: null, error: undefined })
+  set({ loggedIn: false, email: null, status: 'idle', last: null, error: undefined })
 }
 
 interface Doc {

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { findTides, loadForecast } from '../lib/forecast'
 import { shrinkPhoto } from '../lib/photo'
 import { scoreSeries } from '../lib/scoring'
-import { addTrip, liveTrips, photoBlobs, removeTrip } from '../lib/store'
+import { addTrip, exportBackup, liveTrips, photoBlobs, removeTrip } from '../lib/store'
 import { SPECIES } from '../lib/species'
 import type { CatchItem, Mode, Spot, Trip } from '../lib/types'
 
@@ -73,15 +73,6 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
 
   if (open) return <Report trip={open} onClose={() => setOpen(null)} />
 
-  async function exportAll() {
-    const toUrl = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(b) })
-    const rows = await Promise.all(trips.map(async (t) => ({ ...t, photos: await Promise.all((await photoBlobs(t.photoUids)).map(toUrl)) })))
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ spots, trips: rows }, null, 1)], { type: 'application/json' }))
-    a.download = `peche-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-  }
-
   return (
     <section>
       {adding ? (
@@ -89,7 +80,7 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
       ) : (
         <div className="row">
           <button className="primary" onClick={() => setAdding(true)}>+ Nouvelle sortie</button>
-          {trips.length > 0 && <button onClick={exportAll}>Sauvegarde</button>}
+          {trips.length > 0 && <button onClick={exportBackup}>Sauvegarde</button>}
         </div>
       )}
       {trips.map((t) => (
