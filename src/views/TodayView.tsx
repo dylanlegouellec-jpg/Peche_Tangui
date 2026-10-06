@@ -92,6 +92,10 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   const seaDays = useMemo(() => new Set((data?.forecast.hours ?? []).filter((h) => h.wave != null).map((h) => dayKey(h.ts))), [data])
   const partial = (key: string) => !seaDays.has(key)
   const daysAhead = (key: string) => Math.round((noonOf(key) - noonOf(todayKey)) / 86400)
+  const hourAt = useMemo(() => new Map((data?.forecast.hours ?? []).map((h) => [h.ts, h])), [data])
+  const point = focus ? hourAt.get(focus.ts) : undefined
+  const dayTemps = dayHours.map((s) => hourAt.get(s.ts)?.temp).filter((t): t is number => t != null)
+  const rain24 = (data?.forecast.hours ?? []).filter((h) => focus && h.ts > focus.ts - 86400 && h.ts <= focus.ts).reduce((n, h) => n + (h.precip ?? 0), 0)
   const dayTides = tides.filter((t) => dayKey(t.ts) === activeDay)
   const chooseDay = (key: string) => {
     setDay(key)
@@ -178,6 +182,34 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
               <div className="muted">{focus.score >= 70 ? 'Conditions très favorables' : focus.score >= 45 ? 'Conditions correctes' : 'Conditions peu favorables'}</div>
             </div>
           </div>
+
+          {point && (
+            <div className="card weather">
+              <div className="tiles">
+                <div className="tile">
+                  <span className="muted small">Air</span>
+                  <strong>{point.temp != null ? `${Math.round(point.temp)}°` : '—'}</strong>
+                  {point.feels != null && <span className="muted small">ressenti {Math.round(point.feels)}°</span>}
+                </div>
+                <div className="tile">
+                  <span className="muted small">Eau</span>
+                  <strong>{point.seaTemp != null ? `${point.seaTemp.toFixed(1)}°` : '—'}</strong>
+                  <span className="muted small">mer</span>
+                </div>
+                <div className="tile">
+                  <span className="muted small">Ciel</span>
+                  <strong>{point.cloud != null ? `${Math.round(point.cloud)} %` : '—'}</strong>
+                  <span className="muted small">nuages</span>
+                </div>
+                <div className="tile">
+                  <span className="muted small">Pluie</span>
+                  <strong>{(point.precip ?? 0).toFixed(1)}</strong>
+                  <span className="muted small">mm/h · {Math.round(rain24)} mm/24 h</span>
+                </div>
+              </div>
+              {dayTemps.length > 0 && <p className="muted small">Journée : {Math.round(Math.min(...dayTemps))}° à {Math.round(Math.max(...dayTemps))}° (air)</p>}
+            </div>
+          )}
 
           <div className="row between muted small updated">
             <span>

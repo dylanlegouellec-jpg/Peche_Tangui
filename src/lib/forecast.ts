@@ -3,10 +3,16 @@ import type { Forecast, HourPoint, Spot, Tide } from './types'
 
 const TZ = 'Europe/Paris'
 
-async function getJson(url: string, timeoutMs = 12000) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
-  return r.json()
+async function getJson(url: string, timeoutMs = 12000, retries = 1): Promise<any> {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return await r.json()
+  } catch (e) {
+    // Une connexion qui bloque arrive parfois sur mobile : un seul nouvel essai suffit le plus souvent.
+    if (retries > 0) return getJson(url, timeoutMs, retries - 1)
+    throw e
+  }
 }
 
 export type Loaded = { forecast: Forecast; offline: boolean }
@@ -31,7 +37,7 @@ export async function loadForecast(spot: Spot, force = false): Promise<Loaded | 
     const common = `latitude=${spot.lat}&longitude=${spot.lon}&timezone=${TZ}&timeformat=unixtime&past_days=2`
     const [meteo, marine] = await Promise.all([
       getJson(
-        `https://api.open-meteo.com/v1/forecast?${common}&forecast_days=16&wind_speed_unit=kmh&hourly=wind_speed_10m,wind_gusts_10m,pressure_msl,precipitation,is_day&daily=sunrise,sunset`,
+        `https://api.open-meteo.com/v1/forecast?${common}&forecast_days=16&wind_speed_unit=kmh&hourly=wind_speed_10m,wind_gusts_10m,pressure_msl,precipitation,is_day,temperature_2m,apparent_temperature,cloud_cover&daily=sunrise,sunset`,
       ),
       getJson(
         `https://marine-api.open-meteo.com/v1/marine?${common}&forecast_days=8&hourly=wave_height,wave_period,sea_surface_temperature,sea_level_height_msl`,
@@ -46,6 +52,9 @@ export async function loadForecast(spot: Spot, force = false): Promise<Loaded | 
       pressure: meteo.hourly.pressure_msl[i],
       precip: meteo.hourly.precipitation[i],
       isDay: meteo.hourly.is_day[i] === 1,
+      temp: meteo.hourly.temperature_2m?.[i] ?? null,
+      feels: meteo.hourly.apparent_temperature?.[i] ?? null,
+      cloud: meteo.hourly.cloud_cover?.[i] ?? null,
       wave: mh?.wave_height?.[i] ?? null,
       wavePeriod: mh?.wave_period?.[i] ?? null,
       seaTemp: mh?.sea_surface_temperature?.[i] ?? null,

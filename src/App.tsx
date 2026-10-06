@@ -67,7 +67,7 @@ export default function App() {
         {tab === 'settings' ? (
           <SettingsView settings={settings} spots={spots} />
         ) : tab === 'spots' ? (
-          <SpotsView spots={spots} />
+          <SpotsView spots={spots} onOpenSpot={(id) => { setSpotId(id); changeTab('today') }} />
         ) : spots.length === 0 ? (
           <p className="muted">Ajoute un spot pour commencer.</p>
         ) : tab === 'today' ? (
@@ -75,7 +75,7 @@ export default function App() {
         ) : tab === 'species' ? (
           <SpeciesView mode={currentMode} />
         ) : (
-          <JournalView spots={spots} mode={currentMode} />
+          <JournalView spots={spots} mode={currentMode} settings={settings} />
         )}
           </div>
         </div>

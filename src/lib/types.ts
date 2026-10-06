@@ -23,6 +23,9 @@ export interface HourPoint {
   pressure: number | null // hPa
   precip: number | null // mm
   isDay: boolean
+  temp?: number | null // °C, air
+  feels?: number | null // °C, ressenti
+  cloud?: number | null // %
 }
 
 export interface Sun {
@@ -80,7 +83,7 @@ export interface Trip {
   notes?: string
   catches: CatchItem[]
   photoUids: string[]
-  snapshot?: { wind: number | null; wave: number | null; seaTemp: number | null; pressure: number | null; score: number | null }
+  snapshot?: { airTemp?: number | null; wind: number | null; wave: number | null; seaTemp: number | null; pressure: number | null; score: number | null }
 }
 
 export type Theme = 'auto' | 'dark' | 'light'

@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import { SpotsMap } from '../components/SpotsMap'
 import { addSpot, removeSpot, updateSpot } from '../lib/store'
 import type { Spot } from '../lib/types'
 
 const getPosition = () =>
   new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000 }))
 
-export function SpotsView({ spots }: { spots: Spot[] }) {
+export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (id: number) => void }) {
+  const [view, setView] = useState<'list' | 'map'>('list')
   const [name, setName] = useState('')
   const [coords, setCoords] = useState('')
   const [error, setError] = useState('')
@@ -38,8 +40,24 @@ export function SpotsView({ spots }: { spots: Spot[] }) {
     }
   }
 
+  async function addFromMap(lat: number, lon: number) {
+    const name = prompt('Nom du nouveau spot à cet endroit ?')?.trim()
+    if (name) await addSpot({ name, lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) })
+  }
+
   return (
     <section>
+      <div className="seg full" role="group" aria-label="Affichage">
+        <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>Liste</button>
+        <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>Carte</button>
+      </div>
+      {view === 'map' && (
+        <>
+          <SpotsMap spots={spots} onOpen={onOpenSpot} onAdd={addFromMap} />
+          <p className="muted small">Vert : spot avec des prises · bleu : sorties sans prise · gris : pas encore pêché. Appui long sur la carte pour ajouter un spot.</p>
+        </>
+      )}
+      {view === 'list' && <>
       <form className="card" onSubmit={add}>
         <h3>Ajouter un spot</h3>
         <input placeholder="Nom du coin" value={name} onChange={(e) => setName(e.target.value)} />
@@ -67,5 +85,7 @@ export function SpotsView({ spots }: { spots: Spot[] }) {
         </div>
       ))}
       </div>
-    </section>  )
+      </>}
+    </section>
+  )
 }

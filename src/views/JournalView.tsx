@@ -5,7 +5,8 @@ import { shrinkPhoto } from '../lib/photo'
 import { scoreSeries } from '../lib/scoring'
 import { addTrip, exportBackup, liveTrips, photoBlobs, removeTrip } from '../lib/store'
 import { SPECIES } from '../lib/species'
-import type { CatchItem, Mode, Spot, Trip } from '../lib/types'
+import { StatsView } from './StatsView'
+import type { CatchItem, Mode, Settings, Spot, Trip } from '../lib/types'
 
 const fmt = (ms: number) => new Date(ms).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
 
@@ -49,7 +50,7 @@ function Report({ trip, onClose }: { trip: Trip; onClose: () => void }) {
       </p>
       {trip.snapshot && (
         <p className="muted">
-          Conditions : vent {trip.snapshot.wind != null ? `${Math.round(trip.snapshot.wind)} km/h` : '?'} · houle {trip.snapshot.wave?.toFixed(1) ?? '?'} m · eau {trip.snapshot.seaTemp?.toFixed(1) ?? '?'} °C · pression {trip.snapshot.pressure != null ? `${Math.round(trip.snapshot.pressure)} hPa` : '?'}
+          Conditions : {trip.snapshot.airTemp != null ? `air ${Math.round(trip.snapshot.airTemp)} °C · ` : ''}vent {trip.snapshot.wind != null ? `${Math.round(trip.snapshot.wind)} km/h` : '?'} · houle {trip.snapshot.wave?.toFixed(1) ?? '?'} m · eau {trip.snapshot.seaTemp?.toFixed(1) ?? '?'} °C · pression {trip.snapshot.pressure != null ? `${Math.round(trip.snapshot.pressure)} hPa` : '?'}
           {trip.snapshot.score != null && ` · score prévu ${trip.snapshot.score}/100`}
         </p>
       )}
@@ -61,7 +62,8 @@ function Report({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   )
 }
 
-export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode: Mode }) {
+export function JournalView({ spots, mode: defaultMode, settings }: { spots: Spot[]; mode: Mode; settings: Settings }) {
+  const [stats, setStats] = useState(false)
   const [trips, setTrips] = useState<Trip[]>([])
   const [open, setOpen] = useState<Trip | null>(null)
   const [adding, setAdding] = useState(false)
@@ -72,6 +74,7 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
   }, [])
 
   if (open) return <Report trip={open} onClose={() => setOpen(null)} />
+  if (stats) return <StatsView settings={settings} defaultMode={defaultMode} onBack={() => setStats(false)} />
 
   return (
     <section>
@@ -80,6 +83,7 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
       ) : (
         <div className="row">
           <button className="primary" onClick={() => setAdding(true)}>+ Nouvelle sortie</button>
+          {trips.length > 0 && <button onClick={() => setStats(true)}>📊 Bilan de saison</button>}
           {trips.length > 0 && <button onClick={exportBackup}>Sauvegarde</button>}
         </div>
       )}
@@ -129,7 +133,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
       const h = f.hours.find((x) => Math.abs(x.ts - sec) <= 1800)
       if (h) {
         const sc = scoreSeries(f, findTides(f.hours), mode, 0).find((s) => s.ts === h.ts)
-        snapshot = { wind: h.wind, wave: h.wave, seaTemp: h.seaTemp, pressure: h.pressure, score: sc?.score ?? null }
+        snapshot = { airTemp: h.temp ?? null, wind: h.wind, wave: h.wave, seaTemp: h.seaTemp, pressure: h.pressure, score: sc?.score ?? null }
       }
     }
     await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot })
