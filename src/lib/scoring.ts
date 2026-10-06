@@ -77,7 +77,9 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
   }
 
   const total = factors.reduce((s, f) => s + f.weight, 0)
-  const score = total ? Math.round((factors.reduce((s, f) => s + f.value * f.weight, 0) / total) * 100) : 0
+  let score = total ? Math.round((factors.reduce((s, f) => s + f.value * f.weight, 0) / total) * 100) : 0
+  // Sans houle ni marée (prévisions au-delà de 8 jours), le score est ramené vers le neutre : il ne peut pas être « parfait ».
+  if (h.wave == null) score = Math.round(score * 0.7 + 50 * 0.3)
   return { ts: h.ts, score, factors, warnings }
 }
 

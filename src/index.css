@@ -166,3 +166,5 @@ button, a, select, label, .day, .win.pick { touch-action: manipulation; }
   .hero { flex-direction: row; text-align: left; gap: 16px; justify-content: flex-start; flex-wrap: wrap; }
   .hero h2 { margin: 0; }
 }
+.day.partial:not(.on) { border-style: dashed; } .day.partial b::after { content: '~'; color: var(--muted); font-weight: 400; }
+.day.partial.on b::after { color: #fff; }

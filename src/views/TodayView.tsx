@@ -64,7 +64,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   const all = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, 0, windUnit) : []), [data, tides, mode, windUnit])
   const todayKey = dayKey(now)
   // 7 jours à partir d'aujourd'hui ; les créneaux déjà passés d'aujourd'hui sont ignorés.
-  const windows = useMemo(() => bestWindows(all.filter((s) => s.ts >= now - 3600 && dayKey(s.ts) >= todayKey)).slice(0, 7), [all, now, todayKey])
+  const windows = useMemo(() => bestWindows(all.filter((s) => s.ts >= now - 3600 && dayKey(s.ts) >= todayKey)), [all, now, todayKey])
   const activeDay = day && windows.some((w) => w.key === day) ? day : todayKey
   const dayHours = all.filter((s) => dayKey(s.ts) === activeDay)
   const dayWindow = windows.find((w) => w.key === activeDay)
@@ -79,6 +79,9 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
     const i = Math.min(bars.length - 1, Math.max(0, Math.floor(((clientX - r.left) / r.width) * bars.length)))
     setSelected(bars[i].ts)
   }
+  // Au-delà de 8 jours, Open-Meteo ne prévoit plus ni houle ni marées : le score est partiel.
+  const seaDays = useMemo(() => new Set((data?.forecast.hours ?? []).filter((h) => h.wave != null).map((h) => dayKey(h.ts))), [data])
+  const partial = (key: string) => !seaDays.has(key)
   const dayTides = tides.filter((t) => dayKey(t.ts) === activeDay)
   const chooseDay = (key: string) => {
     setDay(key)
@@ -114,7 +117,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
 
           <div className="days" role="tablist" aria-label="Jour">
             {windows.map((w, i) => (
-              <button key={w.key} role="tab" aria-selected={w.key === activeDay} className={`day ${w.key === activeDay ? 'on' : ''}`} onClick={() => chooseDay(w.key)}>
+              <button key={w.key} role="tab" aria-selected={w.key === activeDay} className={`day ${w.key === activeDay ? 'on' : ''} ${partial(w.key) ? 'partial' : ''}`} onClick={() => chooseDay(w.key)}>
                 <span className="dw">{i === 0 ? 'Auj.' : new Date(w.start * 1000).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'Europe/Paris' }).replace('.', '')}</span>
                 <span className="dn">{new Date(w.start * 1000).toLocaleDateString('fr-FR', { day: 'numeric', timeZone: 'Europe/Paris' })}</span>
                 <b className={tone(w.avg)}>{w.avg}</b>
@@ -124,6 +127,12 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
 
           <div className="today-grid">
             <div className="col">
+          {partial(activeDay) && (
+            <p className="card warn small">
+              Prévision lointaine : au-delà de 8 jours, la houle et les marées ne sont pas prévues. Le score ne tient compte que du vent, de la pression, de la lumière et d’un coefficient estimé, c’est une simple tendance.
+            </p>
+          )}
+
           <div className={`card score ${tone(focus.score)}`}>
             <div className="big">{focus.score}</div>
             <div>
@@ -164,7 +173,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
             </div>
             <div className="col">
           <div className="card">
-            <h3>Prévisions sur 7 jours</h3>
+            <h3>Prévisions sur {windows.length} jours</h3>
             <p className="muted small">Meilleur créneau de 2 h de chaque jour. Touche un jour pour le détailler.</p>
             {windows.map((w) => (
               <div className={`win pick ${w.key === activeDay ? 'on' : ''}`} key={w.key} onClick={() => chooseDay(w.key)}>
@@ -220,7 +229,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
                 </div>
               ))
             ) : (
-              <p className="muted small">Pas de données de marée pour ce point.</p>
+              <p className="muted small">{partial(activeDay) ? 'Marées non prévues au-delà de 8 jours.' : 'Pas de données de marée pour ce point.'}</p>
             )}
             <p className="muted small">
               {moonLabel(focus.ts)} · coefficient estimé ≈ {estimatedCoef(focus.ts)} (approximation, pas la valeur officielle du SHOM).
