@@ -9,8 +9,13 @@
 :root[data-theme='light'] { --bg: #eef5fa; --card: #fff; --line: #c9dbe8; --text: #12304a; --muted: #5a7a94; color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, sans-serif; }
-.app { max-width: 640px; margin: 0 auto; min-height: 100dvh; padding: 0 16px 130px; }
-header { display: flex; align-items: baseline; gap: 10px; padding: 14px 0 6px; }
+.app { max-width: 640px; margin: 0 auto; padding: 0 16px 130px; }
+/* Le défilement se fait dans .scroll, sous un en-tête fixe et opaque : le contenu ne passe jamais sous la barre d'état iOS, donc pas de flou. */
+html, body, #root { height: 100%; overflow: hidden; overscroll-behavior: none; }
+.shell { position: fixed; inset: 0; display: flex; flex-direction: column; }
+.shell > header { flex: none; display: flex; align-items: baseline; gap: 10px; padding: calc(env(safe-area-inset-top) + 8px) 16px 8px; background: var(--bg); border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); max-width: none; }
+.shell > header h1 { max-width: 640px; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: 4px; }
 h1 { font-size: 1.3rem; margin: 0; }
 h3 { margin: 0 0 8px; font-size: 1rem; }
 .muted { color: var(--muted); } .small { font-size: .82rem; } .cap { text-transform: capitalize; }
@@ -30,10 +35,13 @@ button { cursor: pointer; } button.primary { background: var(--accent); border-c
 i.good, .spark .good { background: var(--good); } i.mid, .spark .mid { background: var(--mid); } i.bad, .spark .bad { background: var(--bad); }
 b.good { color: var(--good); } b.mid { color: var(--mid); } b.bad { color: var(--bad); }
 .win { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); } .win:first-of-type { border-top: 0; }
-.spark { display: flex; align-items: flex-end; gap: 2px; height: 80px; } .spark button { flex: 1; padding: 0; border: 0; border-radius: 2px; opacity: .7; min-width: 0; } .spark .sel { opacity: 1; outline: 2px solid var(--text); }
+.spark { display: flex; align-items: flex-end; gap: 2px; height: 96px; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: ew-resize; }
+.spark i { flex: 1; min-width: 0; border-radius: 2px; opacity: .55; }
+.spark i.sel { opacity: 1; outline: 2px solid var(--text); outline-offset: 1px; }
+.spark:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .tag { font-size: .7rem; background: var(--line); border-radius: 6px; padding: 1px 6px; }
 .photos { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; } .photos img { max-width: 100%; max-height: 220px; border-radius: 8px; }
-@media print { .tabbar, header, .no-print { display: none; } body { background: #fff; color: #000; } .app { padding: 0; } }
+@media print { .tabbar, header, .no-print { display: none; } body { background: #fff; color: #000; } .app { padding: 0; } html, body, #root { height: auto; overflow: visible; } .shell { position: static; display: block; } .scroll { overflow: visible; } }
 h3.sec { margin: 18px 0 0; color: var(--muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; }
 .row select { flex: 1; min-width: 0; }
 
@@ -44,7 +52,7 @@ h3.sec { margin: 18px 0 0; color: var(--muted); font-size: .85rem; text-transfor
   bottom: calc(env(safe-area-inset-bottom) + 12px);
   width: min(calc(100vw - 24px), 440px); display: flex; padding: var(--pad);
   border-radius: 999px; border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  background: color-mix(in srgb, var(--card) 72%, transparent);
+  background: color-mix(in srgb, var(--card) var(--tab-alpha, 72%), transparent);
   -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
 }
@@ -71,3 +79,5 @@ h3.sec { margin: 18px 0 0; color: var(--muted); font-size: .85rem; text-transfor
 input.dt { -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 0; max-width: 100%; min-height: 46px; text-align: left; }
 input.dt::-webkit-date-and-time-value { text-align: left; }
 .filebtn { display: block; text-align: center; margin: 6px 0; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); cursor: pointer; }
+
+input[type=range] { width: 100%; padding: 0; accent-color: var(--accent); }

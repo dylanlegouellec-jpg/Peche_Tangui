@@ -87,9 +87,11 @@ export interface Settings {
   windUnit: WindUnit
   defaultMode: Mode
   defaultSpotUid?: string
+  /** Opacité du fond de la barre d'onglets, en % (20–100). */
+  tabOpacity: number
 }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord' }
+export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 72 }
 
 export interface PhotoRow {
   uid: string

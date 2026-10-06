@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { findTides, loadForecast } from '../lib/forecast'
 import { estimatedCoef, moonLabel } from '../lib/moon'
 import { bestWindows, scoreSeries } from '../lib/scoring'
@@ -21,6 +21,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   const spot = spots.find((s) => s.id === spotId) ?? spots[0]
   const [data, setData] = useState<{ forecast: Forecast; offline: boolean } | null | undefined>(undefined)
   const [selected, setSelected] = useState<number | null>(null)
+  const sparkRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!spot) return
@@ -36,8 +37,15 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
   const tides = useMemo(() => (data ? findTides(data.forecast.hours) : []), [data])
   const series = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, now, windUnit) : []), [data, tides, mode, now, windUnit])
   const windows = useMemo(() => bestWindows(series), [series])
+  const bars = series.slice(0, 48)
   const current = series[0]
   const focus = series.find((s) => s.ts === selected) ?? current
+  const pick = (clientX: number) => {
+    const r = sparkRef.current?.getBoundingClientRect()
+    if (!r || !bars.length) return
+    const i = Math.min(bars.length - 1, Math.max(0, Math.floor(((clientX - r.left) / r.width) * bars.length)))
+    setSelected(bars[i].ts)
+  }
   const upcomingTides = tides.filter((t) => t.ts >= now).slice(0, 4)
 
   return (
@@ -110,12 +118,33 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit }:
 
           <div className="card">
             <h3>Prochaines 48 h</h3>
-            <div className="spark">
-              {series.slice(0, 48).map((s) => (
-                <button key={s.ts} className={`${tone(s.score)} ${s.ts === focus.ts ? 'sel' : ''}`} style={{ height: `${Math.max(8, s.score)}%` }} onClick={() => setSelected(s.ts)} title={`${dayShort(s.ts)} ${hhmm(s.ts)} : ${s.score}`} aria-label={`${hhmm(s.ts)} ${s.score}`} />
+            <div
+              className="spark"
+              ref={sparkRef}
+              role="slider"
+              tabIndex={0}
+              aria-label="Heure sélectionnée"
+              aria-valuemin={0}
+              aria-valuemax={bars.length - 1}
+              aria-valuenow={Math.max(0, bars.findIndex((b) => b.ts === focus.ts))}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId)
+                pick(e.clientX)
+              }}
+              onPointerMove={(e) => e.buttons && pick(e.clientX)}
+              onKeyDown={(e) => {
+                const k = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+                if (!k) return
+                e.preventDefault()
+                const at = Math.max(0, bars.findIndex((b) => b.ts === focus.ts))
+                setSelected(bars[Math.min(bars.length - 1, Math.max(0, at + k))].ts)
+              }}
+            >
+              {bars.map((s) => (
+                <i key={s.ts} className={`${tone(s.score)} ${s.ts === focus.ts ? 'sel' : ''}`} style={{ height: `${Math.max(8, s.score)}%` }} />
               ))}
             </div>
-            <div className="muted small">Touche une barre pour voir le détail de l’heure.</div>
+            <div className="muted small">Fais glisser ton doigt sur les barres pour voir le détail de chaque heure.</div>
           </div>
 
           <div className="card">

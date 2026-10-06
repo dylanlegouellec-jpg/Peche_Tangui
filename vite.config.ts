@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Pêche Tangui',
+        name: 'Pêche',
         short_name: 'Pêche',
         description: 'Conditions de pêche, espèces et carnet de prises en Morbihan',
         lang: 'fr',

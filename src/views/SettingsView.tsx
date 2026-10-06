@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { db } from '../lib/db'
 import { saveSettings } from '../lib/store'
 import { AccountCard } from './AccountCard'
@@ -16,6 +17,15 @@ function Seg<T extends string>({ value, options, onChange }: { value: T; options
 }
 
 export function SettingsView({ settings, spots }: { settings: Settings; spots: Spot[] }) {
+  const [opacity, setOpacity] = useState(settings.tabOpacity)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => setOpacity(settings.tabOpacity), [settings.tabOpacity])
+  const changeOpacity = (v: number) => {
+    setOpacity(v)
+    document.documentElement.style.setProperty('--tab-alpha', `${v}%`)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => saveSettings({ tabOpacity: v }), 400)
+  }
   return (
     <section>
       <AccountCard />
@@ -24,6 +34,13 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
         <div className="row between">
           <span>Thème</span>
           <Seg<Theme> value={settings.theme} options={[['auto', 'Auto'], ['dark', 'Sombre'], ['light', 'Clair']]} onChange={(theme) => saveSettings({ theme })} />
+        </div>
+        <div>
+          <div className="row between">
+            <span>Opacité de la barre d’onglets</span>
+            <span className="muted">{opacity} %</span>
+          </div>
+          <input type="range" min={20} max={100} step={5} value={opacity} onChange={(e) => changeOpacity(Number(e.target.value))} aria-label="Opacité de la barre d’onglets" />
         </div>
         <div className="row between">
           <span>Unité du vent</span>

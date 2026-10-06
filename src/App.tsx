@@ -33,17 +33,21 @@ export default function App() {
     if (settings.theme === 'auto') root.removeAttribute('data-theme')
     else root.setAttribute('data-theme', settings.theme)
   }, [settings.theme])
+  useEffect(() => {
+    document.documentElement.style.setProperty('--tab-alpha', `${settings.tabOpacity}%`)
+  }, [settings.tabOpacity])
 
   const currentMode = mode ?? settings.defaultMode
   const currentSpot = spotId ?? spots.find((s) => s.uid === settings.defaultSpotUid)?.id
 
   return (
-    <div className="app">
+    <div className="shell">
       <header>
-        <h1>Pêche Tangui</h1>
+        <h1>Pêche</h1>
         <span className="muted small">Morbihan</span>
       </header>
-      <main>
+      <main className="scroll">
+        <div className="app">
         {tab === 'settings' ? (
           <SettingsView settings={settings} spots={spots} />
         ) : tab === 'spots' ? (
@@ -57,6 +61,7 @@ export default function App() {
         ) : (
           <JournalView spots={spots} mode={currentMode} />
         )}
+        </div>
       </main>
       <TabBar tab={tab} onChange={setTab} />
     </div>
