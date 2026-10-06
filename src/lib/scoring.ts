@@ -90,15 +90,18 @@ export function scoreSeries(forecast: Forecast, tides: Tide[], mode: Mode, fromT
 }
 
 export interface Window {
+  key: string
   day: string
   start: number
   end: number
   avg: number
 }
 
-const dayKey = (ts: number) => new Date(ts * 1000).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', weekday: 'long', day: 'numeric', month: 'short' })
+/** Date locale (Paris) au format AAAA-MM-JJ, pour regrouper les heures par jour. */
+export const dayKey = (ts: number) => new Date(ts * 1000).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+export const dayLabel = (ts: number) => new Date(ts * 1000).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', weekday: 'long', day: 'numeric', month: 'short' })
 
-/** Meilleur créneau de 2 h consécutives pour chacun des jours à venir. */
+/** Meilleur créneau de 2 h consécutives pour chaque jour présent dans la série. */
 export function bestWindows(series: HourScore[]): Window[] {
   const byDay = new Map<string, HourScore[]>()
   for (const s of series) {
@@ -106,13 +109,13 @@ export function bestWindows(series: HourScore[]): Window[] {
     byDay.set(k, [...(byDay.get(k) ?? []), s])
   }
   const result: Window[] = []
-  for (const [day, list] of byDay) {
+  for (const [key, list] of byDay) {
     let best: Window | null = null
     for (let i = 0; i < list.length - 1; i++) {
       const avg = (list[i].score + list[i + 1].score) / 2
-      if (!best || avg > best.avg) best = { day, start: list[i].ts, end: list[i + 1].ts + 3600, avg: Math.round(avg) }
+      if (!best || avg > best.avg) best = { key, day: dayLabel(list[i].ts), start: list[i].ts, end: list[i + 1].ts + 3600, avg: Math.round(avg) }
     }
     if (best) result.push(best)
   }
-  return result.slice(0, 4)
+  return result
 }

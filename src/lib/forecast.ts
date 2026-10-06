@@ -27,7 +27,7 @@ export async function loadForecast(spot: Spot, force = false): Promise<Loaded | 
     if (cached && cached.lat === spot.lat && cached.lon === spot.lon && Date.now() - cached.fetchedAt < FRESH_MS) return remember({ forecast: cached, offline: false })
   }
   try {
-    const common = `latitude=${spot.lat}&longitude=${spot.lon}&timezone=${TZ}&timeformat=unixtime&past_days=2&forecast_days=5`
+    const common = `latitude=${spot.lat}&longitude=${spot.lon}&timezone=${TZ}&timeformat=unixtime&past_days=2&forecast_days=7`
     const [meteo, marine] = await Promise.all([
       getJson(
         `https://api.open-meteo.com/v1/forecast?${common}&wind_speed_unit=kmh&hourly=wind_speed_10m,wind_gusts_10m,pressure_msl,precipitation,is_day&daily=sunrise,sunset`,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar } from '../components/Avatar'
-import { IconCloud, IconDownload, IconPalette, IconShield, IconSliders } from '../components/icons'
+import { IconCloud, IconDownload, IconMonitor, IconMoon, IconPalette, IconShield, IconSliders, IconSun } from '../components/icons'
 import { db } from '../lib/db'
 import { exportBackup, saveSettings } from '../lib/store'
 import { getSyncState, subscribeSync } from '../lib/sync'
@@ -65,9 +65,16 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
         {page === 'account' && <AccountCard />}
         {page === 'appearance' && (
           <div className="card">
-            <div className="row between">
-              <span>Thème</span>
-              <Seg<Theme> value={settings.theme} options={[['auto', 'Auto'], ['dark', 'Sombre'], ['light', 'Clair']]} onChange={(theme) => saveSettings({ theme })} />
+            <div>
+              <strong>Thème</strong>
+              <p className="muted small">Clair, sombre ou selon ton téléphone. Retenu sur ton compte : le même sur tous tes appareils.</p>
+              <div className="seg icons" role="group" aria-label="Thème">
+                {([['light', 'Clair', <IconSun />], ['dark', 'Sombre', <IconMoon />], ['auto', 'Selon le téléphone', <IconMonitor />]] as [Theme, string, ReactNode][]).map(([v, label, icon]) => (
+                  <button key={v} className={settings.theme === v ? 'on' : ''} onClick={() => saveSettings({ theme: v })} aria-label={label} aria-pressed={settings.theme === v} title={label}>
+                    {icon}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <div className="row between">
