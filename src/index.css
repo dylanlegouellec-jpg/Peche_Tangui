@@ -11,11 +11,11 @@
 body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, sans-serif; }
 .app { max-width: 640px; margin: 0 auto; padding: 0 16px 130px; }
 /* Le défilement se fait dans .scroll, sous un en-tête fixe et opaque : le contenu ne passe jamais sous la barre d'état iOS, donc pas de flou. */
-html, body, #root { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+html, body, #root { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
 .shell { position: fixed; inset: 0; display: flex; flex-direction: column; }
 .shell > header { flex: none; display: flex; align-items: baseline; gap: 10px; padding: calc(env(safe-area-inset-top) + 8px) 16px 8px; background: var(--bg); border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); max-width: none; }
 .shell > header h1 { max-width: 640px; }
-.scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: 4px; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: none; -webkit-overflow-scrolling: touch; padding-top: 4px; }
 h1 { font-size: 1.3rem; margin: 0; }
 h3 { margin: 0 0 8px; font-size: 1rem; }
 .muted { color: var(--muted); } .small { font-size: .82rem; } .cap { text-transform: capitalize; }
@@ -168,3 +168,10 @@ button, a, select, label, .day, .win.pick { touch-action: manipulation; }
 }
 .day.partial:not(.on) { border-style: dashed; } .day.partial b::after { content: '~'; color: var(--muted); font-weight: 400; }
 .day.partial.on b::after { color: #fff; }
+
+/* Comportement « vraie appli » : ni sélection de texte, ni loupe/menu au toucher long, ni surbrillance au tap */
+html { -webkit-tap-highlight-color: transparent; }
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+img { -webkit-user-drag: none; user-select: none; }
+.days, .spark { overscroll-behavior-x: contain; }
