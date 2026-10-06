@@ -1,4 +1,6 @@
-import { db, saveSettings } from '../lib/db'
+import { db } from '../lib/db'
+import { saveSettings } from '../lib/store'
+import { AccountCard } from './AccountCard'
 import type { Mode, Settings, Spot, Theme, WindUnit } from '../lib/types'
 
 function Seg<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
@@ -16,6 +18,7 @@ function Seg<T extends string>({ value, options, onChange }: { value: T; options
 export function SettingsView({ settings, spots }: { settings: Settings; spots: Spot[] }) {
   return (
     <section>
+      <AccountCard />
       <div className="card">
         <h3>Affichage</h3>
         <div className="row between">
@@ -36,10 +39,10 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
         </div>
         <div className="row between">
           <span>Spot</span>
-          <select value={settings.defaultSpotId ?? ''} onChange={(e) => saveSettings({ defaultSpotId: Number(e.target.value) || undefined })}>
+          <select value={settings.defaultSpotUid ?? ''} onChange={(e) => saveSettings({ defaultSpotUid: e.target.value || undefined })}>
             <option value="">Premier de la liste</option>
             {spots.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.uid} value={s.uid}>{s.name}</option>
             ))}
           </select>
         </div>

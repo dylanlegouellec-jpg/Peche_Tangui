@@ -2,6 +2,9 @@ export type Mode = 'bord' | 'plongee'
 
 export interface Spot {
   id?: number
+  uid: string
+  updatedAt: number
+  deleted?: boolean
   name: string
   lat: number
   lon: number
@@ -62,13 +65,17 @@ export interface CatchItem {
 
 export interface Trip {
   id?: number
+  uid: string
+  updatedAt: number
+  deleted?: boolean
   date: number // ms
   spotId: number
+  spotUid: string
   spotName: string
   mode: Mode
   notes?: string
   catches: CatchItem[]
-  photos: Blob[]
+  photoUids: string[]
   snapshot?: { wind: number | null; wave: number | null; seaTemp: number | null; pressure: number | null; score: number | null }
 }
 
@@ -79,7 +86,14 @@ export interface Settings {
   theme: Theme
   windUnit: WindUnit
   defaultMode: Mode
-  defaultSpotId?: number
+  defaultSpotUid?: string
 }
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord' }
+
+export interface PhotoRow {
+  uid: string
+  tripUid: string
+  blob: Blob
+  uploaded: 0 | 1
+}

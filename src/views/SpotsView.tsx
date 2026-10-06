@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../lib/db'
+import { addSpot, removeSpot, updateSpot } from '../lib/store'
 import type { Spot } from '../lib/types'
 
 const getPosition = () =>
@@ -14,7 +14,7 @@ export function SpotsView({ spots }: { spots: Spot[] }) {
     e.preventDefault()
     const m = coords.match(/(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)/)
     if (!name.trim() || !m) return setError('Nom et coordonnées requis, ex : 47.48, -3.12')
-    await db.spots.add({ name: name.trim(), lat: Number(m[1].replace(',', '.')), lon: Number(m[2].replace(',', '.')) })
+    await addSpot({ name: name.trim(), lat: Number(m[1].replace(',', '.')), lon: Number(m[2].replace(',', '.')) })
     setName('')
     setCoords('')
     setError('')
@@ -32,7 +32,7 @@ export function SpotsView({ spots }: { spots: Spot[] }) {
   async function moveHere(s: Spot) {
     try {
       const p = await getPosition()
-      if (confirm(`Placer « ${s.name} » à ta position actuelle ?`)) await db.spots.update(s.id!, { lat: Number(p.coords.latitude.toFixed(5)), lon: Number(p.coords.longitude.toFixed(5)), notes: undefined })
+      if (confirm(`Placer « ${s.name} » à ta position actuelle ?`)) await updateSpot(s.id!, { lat: Number(p.coords.latitude.toFixed(5)), lon: Number(p.coords.longitude.toFixed(5)), notes: undefined })
     } catch {
       alert('Position indisponible')
     }
@@ -59,7 +59,7 @@ export function SpotsView({ spots }: { spots: Spot[] }) {
             </div>
             <div className="row">
               <button onClick={() => moveHere(s)} title="Placer ici">📍 Placer ici</button>
-              <button onClick={() => confirm(`Supprimer « ${s.name} » ?`) && db.spots.delete(s.id!)} aria-label="Supprimer">🗑</button>
+              <button onClick={() => confirm(`Supprimer « ${s.name} » ?`) && removeSpot(s.id!)} aria-label="Supprimer">🗑</button>
             </div>
           </div>
           {s.notes && <div className="warn small">{s.notes}</div>}

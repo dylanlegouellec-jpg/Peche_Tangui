@@ -1,7 +1,9 @@
 import { liveQuery } from 'dexie'
 import { useEffect, useState } from 'react'
 import { TabBar, type Tab } from './components/TabBar'
-import { db, loadSettings, seedSpots } from './lib/db'
+import { loadSettings, seedSpots } from './lib/db'
+import { liveSpots } from './lib/store'
+import { startAutoSync } from './lib/sync'
 import { DEFAULT_SETTINGS, type Mode, type Settings, type Spot } from './lib/types'
 import { JournalView } from './views/JournalView'
 import { SettingsView } from './views/SettingsView'
@@ -17,8 +19,8 @@ export default function App() {
   const [mode, setMode] = useState<Mode>()
 
   useEffect(() => {
-    seedSpots()
-    const a = liveQuery(() => db.spots.toArray()).subscribe(setSpots)
+    seedSpots().then(startAutoSync)
+    const a = liveQuery(liveSpots).subscribe(setSpots)
     const b = liveQuery(loadSettings).subscribe(setSettings)
     return () => {
       a.unsubscribe()
@@ -33,7 +35,7 @@ export default function App() {
   }, [settings.theme])
 
   const currentMode = mode ?? settings.defaultMode
-  const currentSpot = spotId ?? settings.defaultSpotId
+  const currentSpot = spotId ?? spots.find((s) => s.uid === settings.defaultSpotUid)?.id
 
   return (
     <div className="app">

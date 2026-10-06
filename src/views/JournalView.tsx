@@ -1,14 +1,26 @@
+import { liveQuery } from 'dexie'
 import { useEffect, useMemo, useState } from 'react'
-import { db } from '../lib/db'
 import { findTides, loadForecast } from '../lib/forecast'
 import { shrinkPhoto } from '../lib/photo'
 import { scoreSeries } from '../lib/scoring'
+import { addTrip, liveTrips, photoBlobs, removeTrip } from '../lib/store'
 import { SPECIES } from '../lib/species'
 import type { CatchItem, Mode, Spot, Trip } from '../lib/types'
 
 const fmt = (ms: number) => new Date(ms).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
 
-function Photos({ blobs }: { blobs: Blob[] }) {
+function Photos({ uids }: { uids: string[] }) {
+  const [blobs, setBlobs] = useState<Blob[]>([])
+  const key = uids.join()
+  useEffect(() => {
+    const sub = liveQuery(() => photoBlobs(uids)).subscribe(setBlobs)
+    return () => sub.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+  return <Gallery blobs={blobs} />
+}
+
+function Gallery({ blobs }: { blobs: Blob[] }) {
   const urls = useMemo(() => blobs.map((b) => URL.createObjectURL(b)), [blobs])
   useEffect(() => () => urls.forEach(URL.revokeObjectURL), [urls])
   return (
@@ -44,7 +56,7 @@ function Report({ trip, onClose }: { trip: Trip; onClose: () => void }) {
       <h3>Prises</h3>
       {trip.catches.length === 0 ? <p>Bredouille.</p> : <ul>{trip.catches.map((c, i) => <li key={i}>{c.species}{c.sizeCm ? ` · ${c.sizeCm} cm` : ''}{c.weightKg ? ` · ${c.weightKg} kg` : ''}</li>)}</ul>}
       {trip.notes && <><h3>Notes</h3><p>{trip.notes}</p></>}
-      <Photos blobs={trip.photos} />
+      <Photos uids={trip.photoUids} />
     </div>
   )
 }
@@ -54,20 +66,16 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
   const [open, setOpen] = useState<Trip | null>(null)
   const [adding, setAdding] = useState(false)
 
-  const refresh = () => db.trips.orderBy('date').reverse().toArray().then(setTrips)
   useEffect(() => {
-    refresh()
+    const sub = liveQuery(liveTrips).subscribe(setTrips)
+    return () => sub.unsubscribe()
   }, [])
 
   if (open) return <Report trip={open} onClose={() => setOpen(null)} />
 
   async function exportAll() {
-    const rows = await Promise.all(
-      trips.map(async (t) => ({
-        ...t,
-        photos: await Promise.all(t.photos.map((b) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(b) }))),
-      })),
-    )
+    const toUrl = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(b) })
+    const rows = await Promise.all(trips.map(async (t) => ({ ...t, photos: await Promise.all((await photoBlobs(t.photoUids)).map(toUrl)) })))
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([JSON.stringify({ spots, trips: rows }, null, 1)], { type: 'application/json' }))
     a.download = `peche-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
@@ -77,7 +85,7 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
   return (
     <section>
       {adding ? (
-        <TripForm spots={spots} defaultMode={defaultMode} onDone={() => { setAdding(false); refresh() }} />
+        <TripForm spots={spots} defaultMode={defaultMode} onDone={() => setAdding(false)} />
       ) : (
         <div className="row">
           <button className="primary" onClick={() => setAdding(true)}>+ Nouvelle sortie</button>
@@ -91,10 +99,10 @@ export function JournalView({ spots, mode: defaultMode }: { spots: Spot[]; mode:
             <span className="muted small">{fmt(t.date)}</span>
           </div>
           <div>{t.catches.length ? t.catches.map((c) => c.species + (c.sizeCm ? ` ${c.sizeCm} cm` : '')).join(', ') : 'Bredouille'}</div>
-          <Photos blobs={t.photos.slice(0, 3)} />
+          <Photos uids={t.photoUids.slice(0, 3)} />
           <div className="row">
             <button onClick={() => setOpen(t)}>Rapport</button>
-            <button onClick={() => confirm('Supprimer cette sortie ?') && db.trips.delete(t.id!).then(refresh)}>🗑</button>
+            <button onClick={() => confirm('Supprimer cette sortie ?') && removeTrip(t.id!)}>🗑</button>
           </div>
         </div>
       ))}
@@ -131,7 +139,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
         snapshot = { wind: h.wind, wave: h.wave, seaTemp: h.seaTemp, pressure: h.pressure, score: sc?.score ?? null }
       }
     }
-    await db.trips.add({ date: ts, spotId: spot.id!, spotName: spot.name, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot })
+    await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot })
     onDone()
   }
 
@@ -156,7 +164,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
       ))}
       <button type="button" onClick={() => setCatches([...catches, { species: '' }])}>+ Ajouter une prise</button>
       <input type="file" accept="image/*" multiple onChange={async (e) => setPhotos([...photos, ...(await Promise.all([...(e.target.files ?? [])].map((f) => shrinkPhoto(f))))])} />
-      {photos.length > 0 && <Photos blobs={photos} />}
+      {photos.length > 0 && <Gallery blobs={photos} />}
       <textarea placeholder="Notes (appât, courant, comportement du poisson…)" value={notes} onChange={(e) => setNotes(e.target.value)} />
       <div className="row">
         <button type="button" onClick={onDone}>Annuler</button>
