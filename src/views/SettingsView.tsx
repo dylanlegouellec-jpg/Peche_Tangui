@@ -204,7 +204,7 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
   return (
     <section>
       <div className="hero">
-        <Avatar settings={settings} size={96} />
+        <Avatar settings={settings} size={96} dot />
         <h2>{name || 'Ton profil'}</h2>
         <p className="muted">{st.loggedIn ? st.email ?? 'Connecté' : 'Non connecté'}</p>
         <button className="pillbtn" onClick={() => setPage('profile')}>✎ Modifier le profil</button>

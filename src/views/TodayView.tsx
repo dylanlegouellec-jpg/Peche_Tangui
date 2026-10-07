@@ -364,7 +364,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
               ))}
             </div>
             <div className="axis" aria-hidden="true"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
-            <div className="muted small">Fais glisser ton doigt sur les barres pour voir le détail de chaque heure.</div>
+            <div className="muted small">Touche, clique ou glisse sur les barres pour voir le détail de chaque heure.</div>
           </div>
 
           <div className="card">

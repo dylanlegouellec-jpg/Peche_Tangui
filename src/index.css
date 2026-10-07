@@ -274,3 +274,38 @@ img { -webkit-user-drag: none; user-select: none; }
 .friendhead { gap: 10px; align-items: center; margin-bottom: 6px; }
 .avatar .ini { position: absolute; inset: 0; display: grid; place-items: center; z-index: 0; } .avatar img { position: relative; z-index: 1; }
 .avatar { position: relative; }
+
+/* Pastille de connexion sur la photo de profil */
+.avatar-wrap { position: relative; display: inline-flex; flex: none; line-height: 0; }
+.status-dot { position: absolute; right: -1px; bottom: -1px; border-radius: 50%; border: 2px solid var(--bg); box-sizing: content-box; transition: background .3s; }
+.status-dot.green { background: #3ecf8e; box-shadow: 0 0 0 0 rgba(62, 207, 142, .6); }
+.status-dot.orange { background: #f5a623; animation: dot-pulse 1.6s ease-in-out infinite; }
+.status-dot.red { background: #ef4b4b; }
+.hero .status-dot { border-color: var(--bg); }
+@keyframes dot-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .status-dot.orange { animation: none; } }
+
+/* Mode PC : grand écran avec souris. Menu à gauche, contenu sur plusieurs colonnes. */
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
+  .shell > header { padding: 10px 28px; }
+  .shell > header h1 { font-size: 1.4rem; }
+  .scroll { padding-left: 232px; padding-top: 12px; }
+  .app { max-width: 1320px; margin: 0; padding: 0 32px 40px 28px; }
+  .tabbar {
+    left: 16px; top: 64px; bottom: 16px; transform: none; width: 200px; flex-direction: column; justify-content: flex-start; gap: 4px;
+    border-radius: 22px; padding: 10px; box-shadow: none; background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .tabbar .pill { top: 10px; left: 10px; right: auto; bottom: auto; width: calc(100% - 20px); height: 52px; border-radius: 14px; transform: translateY(calc(var(--i) * (100% + 4px))); }
+  .tabbar button { flex: none; height: 52px; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 0 16px; border-radius: 14px; font-size: .95rem; cursor: pointer; }
+  .tabbar button:hover:not(.on) { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+  button:not(:disabled), select, label.filebtn, .day, .rank { cursor: pointer; }
+  .today-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 20px; align-items: start; }
+  .cols-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 0 20px; align-items: start; }
+  .map { height: min(72dvh, 760px); }
+  .days { max-width: none; }
+  .sheet-backdrop { align-items: center; }
+  .sheet { border-radius: 22px; padding-bottom: 16px; }
+  /* Pages de lecture (réglages, espèces, carnet…) : colonne centrée plutôt que très larges */
+  .page > section:not(:has(.today-grid, .cols-2, .map)) { max-width: 820px; }
+  ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 22%, transparent); border-radius: 6px; border: 2px solid var(--bg); }
+}

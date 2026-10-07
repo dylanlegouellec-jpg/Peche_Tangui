@@ -75,7 +75,7 @@ export default function App() {
         <h1>Pêche</h1>
         <span className="muted small">Morbihan</span>
         <button className="avatar-btn" onClick={() => changeTab('settings')} aria-label="Profil et réglages">
-          <Avatar settings={settings} size={32} />
+          <Avatar settings={settings} size={32} dot />
         </button>
       </header>
       <main className="scroll" ref={scrollRef}>
