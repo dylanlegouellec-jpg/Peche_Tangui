@@ -58,10 +58,10 @@ async function signedIn(res: { token: string; email?: string }, email: string) {
 }
 
 export const login = (email: string, password: string) => api<{ token: string; email?: string }>('auth', { action: 'login', email, password }).then((r) => signedIn(r, email))
-/** Création de compte, étape 1 : un code à 6 chiffres est envoyé par e-mail. */
-export const startSignup = (email: string, password: string) => api<{ sent: boolean }>('auth', { action: 'start', email, password })
-/** Étape 2 : le code reçu crée le compte et connecte. */
-export const verifySignup = (email: string, code: string) => api<{ token: string; email?: string }>('auth', { action: 'verify', email, code }).then((r) => signedIn(r, email))
+/** Création de compte avec un code d'invitation. */
+export const signup = (email: string, password: string, code: string) => api<{ token: string; email?: string }>('auth', { action: 'setup', email, password, code }).then((r) => signedIn(r, email))
+/** Crée un code d'invitation à usage unique, valable 14 jours. */
+export const createInvite = () => api<{ code: string; expiresAt: number }>('auth', { action: 'invite' })
 
 export const authToken = () => read(LS.token)
 

@@ -33,12 +33,14 @@ interface Probe {
   ok: boolean
 }
 
-async function probe(name: string, url: string, init?: RequestInit): Promise<Probe> {
+async function probe(name: string, url: string, init?: RequestInit, okStatuses?: number[]): Promise<Probe> {
   const t0 = performance.now()
   try {
     const r = await fetch(url, { ...init, signal: AbortSignal.timeout(15000) })
     const body = await r.text()
-    return { name, ok: r.ok, ms: Math.round(performance.now() - t0), detail: `HTTP ${r.status}${name === 'API (santé)' ? ' · ' + body.slice(0, 120) : ''}` }
+    const ok = okStatuses ? okStatuses.includes(r.status) : r.ok
+    const extra = name === 'API (santé)' ? body.slice(0, 120) : !ok ? body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90) : ''
+    return { name, ok, ms: Math.round(performance.now() - t0), detail: `HTTP ${r.status}${extra ? ' · ' + extra : ''}` }
   } catch (e) {
     return { name, ok: false, detail: e instanceof Error ? e.message : String(e) }
   }
@@ -73,6 +75,11 @@ export function DiagnosticView() {
       probe('Copernicus IBI (courant, houle)', '/api/cmems?lat=47.55&lon=-3.12'),
       probe('Webcams (Windy)', '/api/webcams?lat=47.55&lon=-3.12'),
       probe('Vigilance (Météo-France)', '/api/vigilance?dep=56'),
+      probe('API (amis)', '/api/friends', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ action: 'list' }) }, token ? undefined : [401]),
+      probe('API (photos)', '/api/photo?uid=test', { headers: token ? { Authorization: `Bearer ${token}` } : {} }, [200, 401, 404]),
+      probe('Carte OpenStreetMap', 'https://tile.openstreetmap.org/9/254/178.png'),
+      probe('Carte OpenSeaMap (balises)', 'https://tiles.openseamap.org/seamark/9/254/178.png'),
+      probe('EMODnet (relief marin)', 'https://ows.emodnet-bathymetry.eu/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=emodnet:mean&STYLES=&SRS=EPSG:4326&BBOX=-3.6,47.4,-3.0,47.8&WIDTH=64&HEIGHT=64&FORMAT=image/png'),
       probe('Open-Meteo mer', 'https://marine-api.open-meteo.com/v1/marine?latitude=47.5&longitude=-3.1&hourly=wave_height&forecast_days=1'),
     ])
     setProbes(list)

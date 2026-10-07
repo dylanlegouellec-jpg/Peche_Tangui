@@ -1,36 +1,29 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
-import { getSyncState, login, logout, startSignup, subscribeSync, syncNow, verifySignup } from '../lib/sync'
+import { useState, useSyncExternalStore } from 'react'
+import { createInvite, getSyncState, login, logout, signup, subscribeSync, syncNow } from '../lib/sync'
 
 const params = new URLSearchParams(location.search)
 
 export function AccountCard() {
   const st = useSyncExternalStore(subscribeSync, getSyncState)
-  const [create, setCreate] = useState(params.has('creer'))
+  const [create, setCreate] = useState(params.has('invit'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [code, setCode] = useState('')
-  const [sent, setSent] = useState(false)
-  const [wait, setWait] = useState(0)
+  const [code, setCode] = useState(params.get('invit') ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-
-  // Délai avant de pouvoir redemander un code
-  useEffect(() => {
-    if (wait <= 0) return
-    const t = setTimeout(() => setWait((w) => w - 1), 1000)
-    return () => clearTimeout(t)
-  }, [wait])
+  const [invite, setInvite] = useState<{ code: string; link: string; expiresAt: number } | null>(null)
+  const [inviteMsg, setInviteMsg] = useState('')
 
   const fail = (err: unknown) => setError(err instanceof TypeError ? 'Pas de connexion internet.' : err instanceof Error ? err.message : 'Erreur')
 
-  async function send() {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
     setBusy(true)
     setError('')
     try {
-      await startSignup(email.trim(), password)
-      setSent(true)
-      setCode('')
-      setWait(60)
+      if (create) await signup(email.trim(), password, code.trim())
+      else await login(email.trim(), password)
+      setPassword('')
     } catch (err) {
       fail(err)
     } finally {
@@ -38,20 +31,26 @@ export function AccountCard() {
     }
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    if (create && !sent) return send()
-    setBusy(true)
-    setError('')
+  async function makeInvite() {
+    setInviteMsg('')
     try {
-      if (create) await verifySignup(email.trim().toLowerCase(), code.trim())
-      else await login(email.trim(), password)
-      setPassword('')
-      setSent(false)
+      const r = await createInvite()
+      setInvite({ code: r.code, link: `${location.origin}/?invit=${r.code}`, expiresAt: r.expiresAt })
     } catch (err) {
-      fail(err)
-    } finally {
-      setBusy(false)
+      setInviteMsg(err instanceof TypeError ? 'Pas de connexion internet.' : err instanceof Error ? err.message : 'Erreur')
+    }
+  }
+  async function shareInvite() {
+    if (!invite) return
+    const text = `Je t’invite sur l’appli de pêche : ${invite.link}`
+    try {
+      if (navigator.share) await navigator.share({ text })
+      else {
+        await navigator.clipboard.writeText(text)
+        setInviteMsg('Lien copié.')
+      }
+    } catch {
+      /* partage annulé */
     }
   }
 
@@ -67,30 +66,42 @@ export function AccountCard() {
           <button onClick={() => confirm('Se déconnecter ? Les données restent sur ce téléphone mais ne seront plus sauvegardées en ligne.') && logout()}>Déconnexion</button>
         </div>
         <p className="muted small">Spots, sorties, photos et réglages sont sauvegardés en ligne et synchronisés entre tes appareils.</p>
+        <div className="invite">
+          <strong>Inviter quelqu’un</strong>
+          <p className="muted small">Crée un code à usage unique (valable 14 jours). La personne aura son propre compte, avec ses propres données, et te recevra comme demande d’ami.</p>
+          {invite ? (
+            <>
+              <p><code>{invite.code}</code></p>
+              <p className="muted small">Valable jusqu’au {new Date(invite.expiresAt).toLocaleDateString('fr-FR')}. Elle ouvre le lien, ou entre le code dans Réglages → Compte → Créer un compte.</p>
+              <div className="row">
+                <button onClick={shareInvite}>Envoyer le lien</button>
+                <button onClick={makeInvite}>Autre code</button>
+              </div>
+            </>
+          ) : (
+            <button onClick={makeInvite}>Créer un code d’invitation</button>
+          )}
+          {inviteMsg && <p className="muted small">{inviteMsg}</p>}
+        </div>
       </div>
     )
   }
 
   const mailOk = /\S+@\S+\.\S+/.test(email)
-  const ready = create ? (sent ? code.trim().length === 6 : mailOk && password.length >= 8) : mailOk && password.length >= 8
+  const ready = mailOk && password.length >= 8 && (!create || code.trim().length > 0)
   return (
     <form className="card" onSubmit={submit}>
       <div className="seg full" role="group" aria-label="Mode">
-        <button type="button" className={!create ? 'on' : ''} onClick={() => { setCreate(false); setSent(false); setError('') }}>Se connecter</button>
+        <button type="button" className={!create ? 'on' : ''} onClick={() => { setCreate(false); setError('') }}>Se connecter</button>
         <button type="button" className={create ? 'on' : ''} onClick={() => { setCreate(true); setError('') }}>Créer un compte</button>
       </div>
-      <p className="muted small">
-        {create ? (sent ? `Un code à 6 chiffres vient d’être envoyé à ${email.trim()}. Pense à regarder dans les courriers indésirables.` : 'Tu recevras un code à 6 chiffres par e-mail pour vérifier ton adresse.') : 'Connecte-toi pour sauvegarder tes données en ligne. Sans compte, tout reste sur ce téléphone.'}
-      </p>
-      <input type="email" placeholder="Adresse e-mail" value={email} onChange={(e) => { setEmail(e.target.value); setSent(false) }} autoComplete="email" autoCapitalize="off" autoCorrect="off" />
+      <p className="muted small">{create ? 'Il te faut un code d’invitation, donné par quelqu’un qui a déjà un compte (chaque code ne crée qu’un compte).' : 'Connecte-toi pour sauvegarder tes données en ligne. Sans compte, tout reste sur ce téléphone.'}</p>
+      <input type="email" placeholder="Adresse e-mail" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" autoCapitalize="off" autoCorrect="off" />
       <input type="password" placeholder={create ? 'Mot de passe (8 caractères min.)' : 'Mot de passe'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={create ? 'new-password' : 'current-password'} />
-      {create && sent && <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="Code reçu par e-mail" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />}
-      {!ready && (email || password) && !sent && <p className="muted small">{!mailOk ? 'Entre une adresse e-mail valide. ' : ''}{password.length < 8 ? 'Mot de passe : 8 caractères minimum.' : ''}</p>}
+      {create && <input placeholder="Code d’invitation" value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="off" autoCorrect="off" />}
+      {!ready && (email || password) && <p className="muted small">{!mailOk ? 'Entre une adresse e-mail valide. ' : ''}{password.length < 8 ? 'Mot de passe : 8 caractères minimum. ' : ''}{create && !code.trim() ? 'Code d’invitation requis.' : ''}</p>}
       {error && <p className="warn">{error}</p>}
-      <button className="primary wide" disabled={busy || !ready}>{busy ? '…' : create ? (sent ? 'Valider et créer mon compte' : 'Recevoir le code') : 'Connexion'}</button>
-      {create && sent && (
-        <button type="button" className="wide" disabled={busy || wait > 0} onClick={send}>{wait > 0 ? `Renvoyer le code (${wait} s)` : 'Renvoyer le code'}</button>
-      )}
+      <button className="primary wide" disabled={busy || !ready}>{busy ? '…' : create ? 'Créer mon compte' : 'Connexion'}</button>
     </form>
   )
 }
