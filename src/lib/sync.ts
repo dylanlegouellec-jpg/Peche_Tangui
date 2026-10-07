@@ -50,6 +50,11 @@ async function api<T>(path: string, body: unknown, method = 'POST'): Promise<T> 
   return r.json()
 }
 
+/** Suis-je l'administrateur (compte n° 1) ? */
+export const isAdmin = () => api<{ admin: boolean }>('auth', { action: 'me' }).then((r) => r.admin)
+/** Crée un code d'invitation à usage unique (administrateur seulement). */
+export const createInvite = () => api<{ code: string; expiresAt: number }>('auth', { action: 'invite' })
+
 export async function authenticate(action: 'login' | 'setup', email: string, password: string, code?: string) {
   const res = await api<{ token: string; email?: string }>('auth', { action, email, password, code })
   write(LS.token, res.token)

@@ -1,5 +1,5 @@
-import { useState, useSyncExternalStore } from 'react'
-import { authenticate, getSyncState, logout, subscribeSync, syncNow } from '../lib/sync'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { authenticate, createInvite, getSyncState, isAdmin, logout, subscribeSync, syncNow } from '../lib/sync'
 
 const params = new URLSearchParams(location.search)
 
@@ -11,6 +11,37 @@ export function AccountCard() {
   const [code, setCode] = useState(params.get('setup') ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
+  const [admin, setAdmin] = useState(false)
+  const [invite, setInvite] = useState<{ code: string; link: string; expiresAt: number } | null>(null)
+  const [inviteMsg, setInviteMsg] = useState('')
+  useEffect(() => {
+    if (st.loggedIn) isAdmin().then(setAdmin, () => setAdmin(false))
+    else setAdmin(false)
+  }, [st.loggedIn])
+
+  async function makeInvite() {
+    setInviteMsg('')
+    try {
+      const r = await createInvite()
+      setInvite({ code: r.code, link: `${location.origin}/?setup=${r.code}`, expiresAt: r.expiresAt })
+    } catch (err) {
+      setInviteMsg(err instanceof TypeError ? 'Pas de connexion internet.' : err instanceof Error ? err.message : 'Erreur')
+    }
+  }
+  async function shareInvite() {
+    if (!invite) return
+    const text = `Voici ton invitation pour l’appli de pêche : ${invite.link}`
+    try {
+      if (navigator.share) await navigator.share({ text })
+      else {
+        await navigator.clipboard.writeText(text)
+        setInviteMsg('Lien copié.')
+      }
+    } catch {
+      /* partage annulé */
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,6 +69,25 @@ export function AccountCard() {
           <button onClick={() => confirm('Se déconnecter ? Les données restent sur ce téléphone mais ne seront plus sauvegardées en ligne.') && logout()}>Déconnexion</button>
         </div>
         <p className="muted small">Spots, sorties, photos et réglages sont sauvegardés en ligne et synchronisés entre tes appareils.</p>
+        {admin && (
+          <div className="invite">
+            <strong>Inviter quelqu’un</strong>
+            <p className="muted small">Crée un code à usage unique (valable 14 jours). La personne aura son propre compte, avec ses propres données.</p>
+            {invite ? (
+              <>
+                <p><code>{invite.code}</code></p>
+                <p className="muted small">Valable jusqu’au {new Date(invite.expiresAt).toLocaleDateString('fr-FR')}. Elle ouvre le lien, ou entre le code dans Réglages → Compte → Créer un compte.</p>
+                <div className="row">
+                  <button onClick={shareInvite}>Envoyer le lien</button>
+                  <button onClick={makeInvite}>Autre code</button>
+                </div>
+              </>
+            ) : (
+              <button onClick={makeInvite}>Créer un code d’invitation</button>
+            )}
+            {inviteMsg && <p className="muted small">{inviteMsg}</p>}
+          </div>
+        )}
       </div>
     )
   }

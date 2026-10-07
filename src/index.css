@@ -269,3 +269,4 @@ img { -webkit-user-drag: none; user-select: none; }
 .rank .rk { color: var(--muted); font-weight: 700; text-align: center; } .rank .rn { display: flex; flex-direction: column; }
 .rank .chip { min-width: 40px; text-align: center; padding: 4px 8px; border-radius: 999px; font-weight: 800; color: #fff; }
 .rank .chip.good { background: var(--good); } .rank .chip.mid { background: var(--mid); } .rank .chip.bad { background: var(--bad); }
+.invite { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); } .invite code { font-size: 1.05rem; font-weight: 700; letter-spacing: .02em; user-select: text; -webkit-user-select: text; }
