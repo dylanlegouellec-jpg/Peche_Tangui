@@ -49,7 +49,7 @@ export function AccountCard() {
         <button type="button" className={!create ? 'on' : ''} onClick={() => { setCreate(false); setError('') }}>Se connecter</button>
         <button type="button" className={create ? 'on' : ''} onClick={() => { setCreate(true); setError('') }}>Créer un compte</button>
       </div>
-      <p className="muted small">{create ? 'À faire une seule fois. Il te faut le code d’installation donné par Claude.' : 'Connecte-toi pour sauvegarder tes données en ligne. Sans compte, tout reste sur ce téléphone.'}</p>
+      <p className="muted small">{create ? 'À faire une seule fois. Il te faut un code d’installation (chaque code ne crée qu’un compte).' : 'Connecte-toi pour sauvegarder tes données en ligne. Sans compte, tout reste sur ce téléphone.'}</p>
       <input type="email" placeholder="Adresse e-mail" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" autoCapitalize="off" autoCorrect="off" />
       <input type="password" placeholder={create ? 'Mot de passe (8 caractères min.)' : 'Mot de passe'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={create ? 'new-password' : 'current-password'} />
       {create && <input placeholder="Code d’installation" value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="off" autoCorrect="off" />}

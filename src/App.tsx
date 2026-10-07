@@ -88,7 +88,7 @@ export default function App() {
         ) : spots.length === 0 ? (
           <p className="muted">Ajoute un spot pour commencer.</p>
         ) : tab === 'today' ? (
-          <TodayView spots={spots} spotId={currentSpot} setSpotId={setSpotId} mode={currentMode} setMode={setMode} windUnit={settings.windUnit} forecastDays={settings.forecastDays} />
+          <TodayView spots={spots} spotId={currentSpot} setSpotId={setSpotId} mode={currentMode} setMode={setMode} windUnit={settings.windUnit} forecastDays={settings.forecastDays} showRanking={!!settings.showRanking} />
         ) : tab === 'species' ? (
           <SpeciesView mode={currentMode} />
         ) : (

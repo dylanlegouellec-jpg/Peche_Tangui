@@ -120,6 +120,8 @@ export interface Settings {
   defaultSpotUid?: string
   /** Opacité du fond de la barre d'onglets, en % (20–100). */
   tabOpacity: number
+  /** Affiche le classement « Où aller ? » sur l'écran principal (désactivé par défaut). */
+  showRanking?: boolean
   /** Nombre de jours de prévisions affichés (la rangée de jours et la liste). */
   forecastDays: number
   firstName?: string

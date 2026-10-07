@@ -28,9 +28,10 @@ interface Props {
   setMode: (m: Mode) => void
   windUnit: WindUnit
   forecastDays: number
+  showRanking: boolean
 }
 
-export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, forecastDays }: Props) {
+export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, forecastDays, showRanking }: Props) {
   const spot = spots.find((s) => s.id === spotId) ?? spots[0]
   const [rawData, setData] = useState<Loaded | null | undefined>(() => peekForecast(spot?.id))
   const [cm, setCm] = useState<Cmems | null>(null)
@@ -231,7 +232,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
             </button>
           </div>
 
-          <BestSpots spots={spots} mode={mode} unit={windUnit} dayKey={activeDay} label={isToday ? 'aujourd’hui' : daysAhead(activeDay) === 1 ? 'demain' : `le ${dayLabel(noonOf(activeDay))}`} current={spot?.id} onPick={setSpotId} />
+          {showRanking && <BestSpots spots={spots} mode={mode} unit={windUnit} dayKey={activeDay} label={isToday ? 'aujourd’hui' : daysAhead(activeDay) === 1 ? 'demain' : `le ${dayLabel(noonOf(activeDay))}`} current={spot?.id} onPick={setSpotId} />}
 
           {inRange && focus ? (
           <div className="today-grid">

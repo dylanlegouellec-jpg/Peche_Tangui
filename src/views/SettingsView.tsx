@@ -143,6 +143,13 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
               </div>
               <p className="muted small">Plus on regarde loin, plus c’est incertain. Au-delà de 8 jours, la houle et les marées ne sont plus prévues. Les jours au-delà de ton choix restent accessibles par le calendrier.</p>
             </div>
+            <div>
+              <div className="row between">
+                <span>Classement « Où aller ? »</span>
+                <Seg<'on' | 'off'> value={settings.showRanking ? 'on' : 'off'} options={[['off', 'Non'], ['on', 'Oui']]} onChange={(v) => saveSettings({ showRanking: v === 'on' })} />
+              </div>
+              <p className="muted small">Affiche sur l’écran principal tous tes spots classés pour le jour choisi.</p>
+            </div>
             <div className="row between">
               <span>Type de sortie</span>
               <Seg<Mode> value={settings.defaultMode} options={[['bord', 'Bord'], ['plongee', 'Sous-marine']]} onChange={(defaultMode) => saveSettings({ defaultMode })} />

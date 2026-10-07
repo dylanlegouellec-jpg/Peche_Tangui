@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { db, ensureSchema, fail, guard } from './_lib/core.js'
+import { db, ensureSchema, fail, guard, userOf } from './_lib/core.js'
 
 interface Doc {
   uid: string
@@ -18,6 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!guard(req, res, 'POST')) return
   try {
     await ensureSchema()
+    const user = userOf(req)
     const body = (req.body ?? {}) as { since?: number; spots?: Doc[]; trips?: Doc[]; settings?: { data: unknown; updatedAt: number } }
     const since = Number(body.since) || 0
     const now = Date.now()
@@ -28,19 +29,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         for (const d of body[t] ?? []) {
           if (typeof d.uid !== 'string' || typeof d.updatedAt !== 'number') continue
           await client.query(
-            `insert into ${t} (uid, data, updated_at, synced_at, deleted) values ($1, $2, $3, $4, $5)
+            `insert into ${t} (uid, data, updated_at, synced_at, deleted, user_id) values ($1, $2, $3, $4, $5, $6)
              on conflict (uid) do update set data = excluded.data, updated_at = excluded.updated_at, synced_at = excluded.synced_at, deleted = excluded.deleted
-             where ${t}.updated_at < excluded.updated_at`,
-            [d.uid, JSON.stringify(d.data ?? {}), d.updatedAt, now, !!d.deleted],
+             where ${t}.updated_at < excluded.updated_at and ${t}.user_id = excluded.user_id`,
+            [d.uid, JSON.stringify(d.data ?? {}), d.updatedAt, now, !!d.deleted, user],
           )
         }
       }
       if (body.settings && typeof body.settings.updatedAt === 'number') {
         await client.query(
-          `insert into app_settings (id, data, updated_at, synced_at) values (1, $1, $2, $3)
-           on conflict (id) do update set data = excluded.data, updated_at = excluded.updated_at, synced_at = excluded.synced_at
+          `insert into app_settings (id, data, updated_at, synced_at, user_id) values (1, $1, $2, $3, $4)
+           on conflict (user_id) do update set data = excluded.data, updated_at = excluded.updated_at, synced_at = excluded.synced_at
            where app_settings.updated_at < excluded.updated_at`,
-          [JSON.stringify(body.settings.data ?? {}), body.settings.updatedAt, now],
+          [JSON.stringify(body.settings.data ?? {}), body.settings.updatedAt, now, user],
         )
       }
       await client.query('commit')
@@ -52,8 +53,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const pull = async (t: (typeof TABLES)[number]) =>
-      (await db().query(`select uid, data, updated_at, deleted from ${t} where synced_at > $1`, [since])).rows.map((r) => ({ uid: r.uid, data: r.data, updatedAt: Number(r.updated_at), deleted: r.deleted }))
-    const s = await db().query('select data, updated_at from app_settings where id = 1 and synced_at > $1', [since])
+      (await db().query(`select uid, data, updated_at, deleted from ${t} where user_id = $2 and synced_at > $1`, [since, user])).rows.map((r) => ({ uid: r.uid, data: r.data, updatedAt: Number(r.updated_at), deleted: r.deleted }))
+    const s = await db().query('select data, updated_at from app_settings where user_id = $2 and synced_at > $1', [since, user])
     res.json({
       // marge de 5 s : une relecture est inoffensive (la plus récente gagne côté client aussi)
       cursor: now - 5000,

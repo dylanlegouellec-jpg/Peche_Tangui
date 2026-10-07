@@ -6,7 +6,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!guard(req, res, 'GET', false)) return
   try {
     await ensureSchema()
-    const u = await db().query('select 1 from app_user where id = 1')
+    const u = await db().query('select 1 from users limit 1')
     res.json({
       database: true,
       jwtSecret: (process.env.JWT_SECRET?.length ?? 0) >= 16,
