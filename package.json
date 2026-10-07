@@ -14,6 +14,7 @@
     "dexie": "^4.4.6",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
+    "nodemailer": "^10.0.16",
     "numcodecs": "^0.3.2",
     "pg": "^8.23.1",
     "react": "^19.2.8",
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@types/leaflet": "^1.9.22",
     "@types/node": "^24.13.3",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

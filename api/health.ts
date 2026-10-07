@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { mailConfigured } from './_lib/mail.js'
 import { db, ensureSchema, fail, guard } from './_lib/core.js'
 
 /** Diagnostic sans secret : la configuration est-elle complète ? */
@@ -10,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.json({
       database: true,
       jwtSecret: (process.env.JWT_SECRET?.length ?? 0) >= 16,
-      setupCode: !!process.env.SETUP_CODE,
+      mail: mailConfigured(),
       accountExists: !!u.rowCount,
     })
   } catch (e) {

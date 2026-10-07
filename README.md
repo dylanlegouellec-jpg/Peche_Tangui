@@ -42,4 +42,5 @@ Données : TICON-4 (CC BY 4.0) via Neaps tide-database (MIT).
 
 - `METEOFRANCE_API_KEY` : alertes de vigilance (`api/vigilance.ts`, clé « API Key » du portail Météo-France).
 - `WINDY_WEBCAMS_KEY` : webcams proches (`api/webcams.ts`).
-- `JWT_SECRET`, `SETUP_CODE` : codes d'installation pour créer un compte (plusieurs possibles, séparés par des virgules ; un code = un compte, chacun a ses propres données). La base Neon est reliée par l'intégration Vercel.
+- `JWT_SECRET` : signature des connexions. La base Neon est reliée par l'intégration Vercel.
+- `GMAIL_USER`, `GMAIL_APP_PASSWORD` : envoi du code de vérification à la création d'un compte (compte Gmail dédié + mot de passe d'application ; 500 e-mails/jour, gratuit).

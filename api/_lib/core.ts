@@ -24,6 +24,8 @@ alter table app_settings drop constraint if exists app_settings_id_check;
 alter table app_settings drop constraint if exists app_settings_pkey;
 alter table app_settings alter column id drop not null;
 create unique index if not exists app_settings_user on app_settings (user_id);
+create table if not exists signups (email text primary key, pass_hash text not null, code_hash text not null, expires_at bigint not null, attempts int not null default 0, sent_at bigint not null);
+create table if not exists mail_log (ip text not null, at bigint not null);
 create table if not exists invites (code_hash text primary key, created_by int not null, created_at bigint not null, expires_at bigint not null, used_by int);
 create index if not exists spots_synced on spots (user_id, synced_at);
 create index if not exists trips_synced on trips (user_id, synced_at);

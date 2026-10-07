@@ -50,18 +50,18 @@ async function api<T>(path: string, body: unknown, method = 'POST'): Promise<T> 
   return r.json()
 }
 
-/** Suis-je l'administrateur (compte n° 1) ? */
-export const isAdmin = () => api<{ admin: boolean }>('auth', { action: 'me' }).then((r) => r.admin)
-/** Crée un code d'invitation à usage unique (administrateur seulement). */
-export const createInvite = () => api<{ code: string; expiresAt: number }>('auth', { action: 'invite' })
-
-export async function authenticate(action: 'login' | 'setup', email: string, password: string, code?: string) {
-  const res = await api<{ token: string; email?: string }>('auth', { action, email, password, code })
+async function signedIn(res: { token: string; email?: string }, email: string) {
   write(LS.token, res.token)
   write(LS.email, res.email ?? email)
   set({ loggedIn: true, email: res.email ?? email, error: undefined })
   await syncNow()
 }
+
+export const login = (email: string, password: string) => api<{ token: string; email?: string }>('auth', { action: 'login', email, password }).then((r) => signedIn(r, email))
+/** Création de compte, étape 1 : un code à 6 chiffres est envoyé par e-mail. */
+export const startSignup = (email: string, password: string) => api<{ sent: boolean }>('auth', { action: 'start', email, password })
+/** Étape 2 : le code reçu crée le compte et connecte. */
+export const verifySignup = (email: string, code: string) => api<{ token: string; email?: string }>('auth', { action: 'verify', email, code }).then((r) => signedIn(r, email))
 
 export function logout() {
   Object.values(LS).forEach((k) => write(k, null))
