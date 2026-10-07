@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar } from '../components/Calendar'
 import { LiveTide } from '../components/LiveTide'
+import { WebcamsCard } from '../components/WebcamsCard'
 import { depthAt, type Depth } from '../lib/bathy'
 import { fetchChlorophyll, waterLook, type Chlorophyll } from '../lib/chloro'
 import { fetchVigilance, type VigilanceDay } from '../lib/vigilance'
@@ -361,6 +362,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
             ))}
           </div>
 
+          {isToday && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} />}
           {isToday && spot && <LiveTide lat={spot.lat} lon={spot.lon} />}
 
           <div className="card">

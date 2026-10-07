@@ -251,3 +251,10 @@ img { -webkit-user-drag: none; user-select: none; }
 .conds { margin-top: 10px; } .conds .kv { font-size: .86rem; } .conds .kv span:last-child { text-align: right; }
 
 .vigi { border-width: 2px; } .vigi.v2 { border-color: #e6c200; } .vigi.v3 { border-color: #f08a24; background: color-mix(in srgb, #f08a24 14%, var(--card)); } .vigi.v4 { border-color: #e03b3b; background: color-mix(in srgb, #e03b3b 16%, var(--card)); }
+
+/* Webcams */
+.cam-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; overscroll-behavior-x: contain; scrollbar-width: none; } .cam-row::-webkit-scrollbar { display: none; }
+.cam { flex: none; width: 200px; display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
+.cam img { width: 200px; height: 112px; object-fit: cover; border-radius: 10px; background: var(--bg); }
+.cam-t { font-weight: 600; font-size: .85rem; line-height: 1.2; }
+.cams a { color: var(--accent); }
