@@ -59,8 +59,11 @@ export function SpotsMap({ spots, onOpen, onAdd, onEdit }: Props) {
     ;(async () => {
       const L = (await import('leaflet')).default
       if (cancelled || !el.current) return
-      const m = L.map(el.current, { zoomControl: false, attributionControl: true }).setView([47.6, -3.15], 9)
+      const m = L.map(el.current, { zoomControl: false, attributionControl: false }).setView([47.6, -3.15], 9)
       L.control.zoom({ position: 'topright' }).addTo(m)
+      const attr = L.control.attribution({ prefix: false, position: 'bottomright' }).addTo(m)
+      attr.getContainer()?.classList.add('attr-fold')
+      attr.getContainer()?.addEventListener('click', () => attr.getContainer()?.classList.toggle('open'))
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap', className: 'osm-base' }).addTo(m)
       bathy.current = L.tileLayer.wms(WMS_URL, { layers: 'emodnet:mean', styles: '', format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.85, attribution: '© EMODnet Bathymetry', ...({ sld_body: depthSld() } as object) })
       L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenSeaMap' }).addTo(m)

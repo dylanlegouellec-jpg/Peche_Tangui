@@ -52,7 +52,8 @@ export function LiveTide({ lat, lon }: { lat: number; lon: number }) {
   const levels = [...model.curve.map((p) => p.level), ...obs.map((o) => o.level)]
   const lo = Math.min(...levels) - 0.2
   const hi = Math.max(...levels) + 0.2
-  const x = (ts: number) => ((ts - model.from) / (model.to - model.from)) * W
+  const PAD = 14
+  const x = (ts: number) => PAD + ((ts - model.from) / (model.to - model.from)) * (W - 2 * PAD)
   const y = (l: number) => H - 14 - ((l - lo) / (hi - lo)) * (H - 28)
   const line = (pts: { ts: number; level: number }[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.ts).toFixed(1)},${y(p.level).toFixed(1)}`).join(' ')
 
@@ -86,9 +87,9 @@ export function LiveTide({ lat, lon }: { lat: number; lon: number }) {
             <text x={x(e.ts)} y={e.type === 'haute' ? y(e.height) - 5 : y(e.height) + 12} textAnchor="middle" className="ext">{hhmm(e.ts)}</text>
           </g>
         ))}
-        <text x="2" y={H + 8} className="ext">−12 h</text>
+        <text x={PAD} y={H + 8} className="ext">−12 h</text>
         <text x={W / 2} y={H + 8} textAnchor="middle" className="ext">maintenant</text>
-        <text x={W - 2} y={H + 8} textAnchor="end" className="ext">+12 h</text>
+        <text x={W - PAD} y={H + 8} textAnchor="end" className="ext">+12 h</text>
       </svg>
       <p className="muted small"><span className="lg obs-lg" /> mesuré <span className="lg pred-lg" /> prédit. Mesures réelles du marégraphe de {live.station.name} (réseau REFMAR du SHOM), à {Math.round(live.distance)} km de ton spot : sur place, le niveau peut différer un peu.</p>
     </div>
