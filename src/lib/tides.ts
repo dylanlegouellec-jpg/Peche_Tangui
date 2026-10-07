@@ -8,6 +8,8 @@ export interface Station {
   lat: number
   lon: number
   msl: number
+  /** Numéro de la station REFMAR (SHOM) pour les mesures réelles, si elle en a une. */
+  refmar?: number
   c: [string, number, number][]
 }
 
@@ -44,6 +46,24 @@ export function nearestStation(lat: number, lon: number): { station: Station; di
     if (!best || d < best.distance) best = { station: s, distance: d }
   }
   return best
+}
+
+/** Station avec mesures temps réel REFMAR la plus proche (dans `maxKm`), pour comparer le réel au prédit. */
+export function nearestLiveStation(lat: number, lon: number, maxKm = 70): { station: Station; distance: number } | null {
+  let best: { station: Station; distance: number } | null = null
+  for (const s of stations) {
+    if (!s.refmar) continue
+    const d = km(lat, lon, s.lat, s.lon)
+    if (d <= maxKm && (!best || d < best.distance)) best = { station: s, distance: d }
+  }
+  return best
+}
+
+/** Hauteur d'eau prédite (courbe) d'une station, un point tous les `stepSec` secondes. */
+export function predictCurve(station: Station, fromTs: number, toTs: number, stepSec = 600): { ts: number; level: number }[] {
+  return predictor(station)
+    .getTimelinePrediction({ start: new Date(fromTs * 1000), end: new Date(toTs * 1000), timeFidelity: stepSec })
+    .map((p) => ({ ts: Math.round(p.time.getTime() / 1000), level: p.level }))
 }
 
 /** Pleines et basses mers prédites (astronomiques) d'une station entre deux instants unix (s). Hauteurs en m au-dessus du zéro de la station. */

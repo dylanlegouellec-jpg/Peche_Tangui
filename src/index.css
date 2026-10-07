@@ -224,3 +224,13 @@ img { -webkit-user-drag: none; user-select: none; }
 
 .toast { position: fixed; z-index: 40; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 64px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .9rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); animation: toast-in .45s cubic-bezier(.34, 1.5, .5, 1) both; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -16px) scale(.9); } }
+
+/* Niveau d'eau réel */
+.live-main { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 6px; } .big2 { font-size: 1.7rem; } .live-trend { font-weight: 700; color: var(--accent); }
+.tide-chart { width: 100%; height: auto; margin-top: 8px; overflow: visible; }
+.tide-chart .pred { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.tide-chart .obs { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linejoin: round; }
+.tide-chart .now-line { stroke: var(--text); stroke-width: 1; opacity: .35; }
+.tide-chart .pm { fill: var(--good); } .tide-chart .bm { fill: var(--mid); }
+.tide-chart .ext { fill: var(--muted); font-size: 8.5px; }
+.lg { display: inline-block; width: 18px; height: 0; border-top: 2.4px solid var(--accent); vertical-align: middle; margin: 0 3px 0 6px; } .pred-lg { border-top: 1.5px dashed var(--muted); }

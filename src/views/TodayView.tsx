@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar } from '../components/Calendar'
+import { LiveTide } from '../components/LiveTide'
 import { PlanCard } from '../components/PlanCard'
 import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
 import { moonLabel } from '../lib/moon'
@@ -299,6 +300,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
               </div>
             ))}
           </div>
+
+          {isToday && spot && <LiveTide lat={spot.lat} lon={spot.lon} />}
 
           <div className="card">
             <h3>Marées · <span className="cap">{dayLabel(focus.ts)}</span></h3>

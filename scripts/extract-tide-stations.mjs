@@ -14,6 +14,8 @@ const picked = stations
     lat: +s.latitude.toFixed(5),
     lon: +s.longitude.toFixed(5),
     msl: +s.datums.MSL.toFixed(3),
+    // Numéro de la station dans le réseau REFMAR du SHOM (mesures en temps réel). Il est dans l'identifiant TICON ; Brest vient d'une autre source.
+    refmar: s.name === 'Brest' ? 3 : Number(s.id.match(/-(\d+)-fra-refmar$/)?.[1]) || undefined,
     c: s.harmonic_constituents.map((c) => [c.name, +c.amplitude.toFixed(4), +c.phase.toFixed(2)]),
   }))
   .sort((a, b) => a.name.localeCompare(b.name))
