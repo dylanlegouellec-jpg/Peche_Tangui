@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar } from '../components/Calendar'
 import { PlanCard } from '../components/PlanCard'
 import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
-import { estimatedCoef, moonLabel } from '../lib/moon'
+import { moonLabel } from '../lib/moon'
+import { coefficientAt, nearestStation, predictTides } from '../lib/tides'
 import { noonOf } from '../lib/astro'
 import { bestWindows, dayKey, dayLabel, scoreSeries } from '../lib/scoring'
 import type { Mode, Spot, WindUnit } from '../lib/types'
@@ -67,7 +68,14 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
   }, [refresh])
 
   const now = Math.floor(Date.now() / 1000)
-  const tides = useMemo(() => (data ? findTides(data.forecast.hours) : []), [data])
+  const stationInfo = useMemo(() => (spot ? nearestStation(spot.lat, spot.lon) : null), [spot])
+  // Marées calculées d'après la jauge la plus proche (gratuit, hors ligne, valable à 16 jours) ; repli sur le modèle Open-Meteo si aucune jauge n'est proche.
+  const tides = useMemo(() => {
+    if (!data) return []
+    const hours = data.forecast.hours
+    if (stationInfo && stationInfo.distance < 120) return predictTides(stationInfo.station, hours[0].ts - 43200, hours[hours.length - 1].ts + 43200)
+    return findTides(hours)
+  }, [data, stationInfo])
   const all = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, 0, windUnit) : []), [data, tides, mode, windUnit])
   const todayKey = dayKey(now)
   // 7 jours à partir d'aujourd'hui ; les créneaux déjà passés d'aujourd'hui sont ignorés.
@@ -174,8 +182,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
           {partial(activeDay) && (
             <p className="card warn small">
               {daysAhead(activeDay) <= 7
-                ? 'La houle et les marées sont indisponibles pour le moment (réseau). Touche « Actualiser » dans un instant : en attendant, le score est partiel.'
-                : 'Prévision lointaine : au-delà de 8 jours, la houle et les marées ne sont pas prévues. Le score ne tient compte que du vent, de la pression, de la lumière et d’un coefficient estimé, c’est une simple tendance.'}
+                ? 'La houle est indisponible pour le moment (réseau). Touche « Actualiser » dans un instant : en attendant, le score est partiel.'
+                : 'Prévision lointaine : au-delà de 8 jours, la houle n’est pas prévue (les marées et le coefficient restent calculés). Le score est ramené vers le neutre : c’est une simple tendance.'}
             </p>
           )}
 
@@ -293,7 +301,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
           </div>
 
           <div className="card">
-            <h3>Marées & lune · <span className="cap">{dayLabel(focus.ts)}</span></h3>
+            <h3>Marées · <span className="cap">{dayLabel(focus.ts)}</span></h3>
             {dayTides.length ? (
               dayTides.map((t) => (
                 <div className="win" key={t.ts}>
@@ -303,10 +311,13 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
                 </div>
               ))
             ) : (
-              <p className="muted small">{partial(activeDay) ? 'Marées non prévues au-delà de 8 jours.' : 'Pas de données de marée pour ce point.'}</p>
+              <p className="muted small">Pas de données de marée pour ce point.</p>
+            )}
+            {dayTides.some((t) => t.type === 'haute') && (
+              <div className="kv"><span className="muted">Coefficient</span><span>{dayTides.filter((t) => t.type === 'haute').map((t) => coefficientAt(t.ts)).join(' · ')}</span></div>
             )}
             <p className="muted small">
-              {moonLabel(focus.ts)} · coefficient estimé ≈ {estimatedCoef(focus.ts)} (approximation, pas la valeur officielle du SHOM).
+              {moonLabel(focus.ts)}. {stationInfo && stationInfo.distance < 120 ? `Horaires et hauteurs calculés d’après la jauge de ${stationInfo.station.name} (${Math.round(stationInfo.distance)} km) : sur ton spot ils peuvent différer, surtout en rivière ou derrière une barre. ` : ''}Coefficient calculé d’après les marées de Brest, à 2-3 points près de la valeur officielle du SHOM.
             </p>
           </div>
             </div>

@@ -1,4 +1,4 @@
-import { estimatedCoef } from './moon'
+import { coefficientAt } from './tides'
 import { tideFlow } from './forecast'
 import type { Factor, Forecast, HourPoint, HourScore, Mode, Tide, WindUnit } from './types'
 
@@ -55,8 +55,8 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
     add('Lumière', sun ? 1 : !h.isDay ? 0.6 : hour >= 11 && hour <= 15 ? 0.5 : 0.7, 1.5, sun === 'aube' ? 'Aube' : sun === 'crepuscule' ? 'Crépuscule' : h.isDay ? 'Plein jour' : 'Nuit')
     const dp = pressureTrend(i, hours)
     if (dp != null) add('Pression', dp > 6 || dp < -8 ? 0.5 : dp >= -6 && dp <= 2 ? 1 : 0.7, 1, `${dp >= 0 ? '+' : ''}${dp.toFixed(1)} hPa / 6 h`)
-    const coef = estimatedCoef(h.ts)
-    add('Coefficient', coef >= 70 ? 1 : coef >= 50 ? 0.7 : 0.5, 1, `≈ ${coef}`)
+    const coef = coefficientAt(h.ts)
+    add('Coefficient', coef >= 70 ? 1 : coef >= 50 ? 0.7 : 0.5, 1, `${coef}`)
   } else {
     if (h.wave != null) {
       add('Houle', ramp(h.wave, 0.3, 1.5), 2, `${h.wave.toFixed(1)} m`)

@@ -3,6 +3,7 @@ import { Avatar } from '../components/Avatar'
 import { IconCloud, IconDownload, IconMonitor, IconMoon, IconPalette, IconShield, IconSliders, IconSun, IconTerminal } from '../components/icons'
 import { db } from '../lib/db'
 import { exportBackup, saveSettings } from '../lib/store'
+import { TIDE_SOURCE } from '../lib/tides'
 import { getSyncState, subscribeSync } from '../lib/sync'
 import type { Mode, Settings, Spot, Theme, WindUnit } from '../lib/types'
 import { AccountCard } from './AccountCard'
@@ -133,7 +134,8 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
         {page === 'about' && (
           <div className="card">
             <p>Prévisions météo et marines : <strong>Open-Meteo</strong>.</p>
-            <p className="muted small">Le coefficient de marée est une estimation calculée à partir de la lune, pas la valeur officielle du SHOM. La visibilité sous l’eau est une estimation.</p>
+            <p className="muted small">Marées et coefficient sont <strong>calculés dans l’appli</strong> (marée astronomique, gratuit, hors ligne, valable pour n’importe quelle date) à partir des constantes harmoniques des jauges de marée REFMAR. Ils ne tiennent pas compte de la météo (une dépression ou un vent fort peut décaler la marée réelle). Le coefficient est calculé d’après Brest, à 2-3 points près de la valeur officielle du SHOM. La visibilité sous l’eau est une estimation.</p>
+            <p className="muted small">{TIDE_SOURCE}</p>
             <p className="muted small">Tailles minimales et espèces : valeurs indicatives, à vérifier avec la réglementation en vigueur.</p>
             <p className="warn small">Ne te fie jamais uniquement à l’appli pour ta sécurité en mer. En chasse sous-marine : jamais seul, balise de surface obligatoire.</p>
           </div>

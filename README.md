@@ -30,3 +30,10 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Marées et coefficient (gratuit, hors ligne)
+
+Les marées et le coefficient sont calculés dans l'appli par prédiction harmonique (`src/lib/tides.ts`) à partir des constantes de jauges REFMAR
+(`src/data/tide-stations.json`, régénérable avec `scripts/extract-tide-stations.mjs`). Aucun abonnement ni appel réseau.
+Le coefficient suit la définition officielle (marnage à Brest / 6,10 m × 100). Vérifié : 21 mars 2015 → 121 / 120 (officiel : 119).
+Données : TICON-4 (CC BY 4.0) via Neaps tide-database (MIT).
