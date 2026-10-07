@@ -37,3 +37,9 @@ Les marées et le coefficient sont calculés dans l'appli par prédiction harmon
 (`src/data/tide-stations.json`, régénérable avec `scripts/extract-tide-stations.mjs`). Aucun abonnement ni appel réseau.
 Le coefficient suit la définition officielle (marnage à Brest / 6,10 m × 100). Vérifié : 21 mars 2015 → 121 / 120 (officiel : 119).
 Données : TICON-4 (CC BY 4.0) via Neaps tide-database (MIT).
+
+## Clés d'API (variables d'environnement Vercel, jamais dans le code)
+
+- `METEOFRANCE_API_KEY` : alertes de vigilance (`api/vigilance.ts`, clé « API Key » du portail Météo-France).
+- `WINDY_WEBCAMS_KEY` : webcams proches (`api/webcams.ts`).
+- `JWT_SECRET`, `SETUP_CODE` : connexion à l'appli. La base Neon est reliée par l'intégration Vercel.
