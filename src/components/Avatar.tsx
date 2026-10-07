@@ -54,7 +54,7 @@ export function Avatar({ settings, size = 40, dot = false }: { settings: Setting
     </span>
   )
   if (!dot) return face
-  const d = Math.max(10, Math.round(size * 0.28))
+  const d = Math.max(8, Math.round(size * 0.19))
   return (
     <span className="avatar-wrap" title={conn.label}>
       {face}
