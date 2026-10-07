@@ -37,10 +37,10 @@ export async function loadForecast(spot: Spot, force = false): Promise<Loaded | 
     const common = `latitude=${spot.lat}&longitude=${spot.lon}&timezone=${TZ}&timeformat=unixtime&past_days=2`
     const [meteo, marine] = await Promise.all([
       getJson(
-        `https://api.open-meteo.com/v1/forecast?${common}&forecast_days=16&wind_speed_unit=kmh&hourly=wind_speed_10m,wind_gusts_10m,pressure_msl,precipitation,is_day,temperature_2m,apparent_temperature,cloud_cover&daily=sunrise,sunset`,
+        `https://api.open-meteo.com/v1/forecast?${common}&forecast_days=16&wind_speed_unit=kmh&hourly=wind_speed_10m,wind_gusts_10m,pressure_msl,precipitation,is_day,temperature_2m,apparent_temperature,cloud_cover,wind_direction_10m,visibility,uv_index,precipitation_probability&daily=sunrise,sunset`,
       ),
       getJson(
-        `https://marine-api.open-meteo.com/v1/marine?${common}&forecast_days=8&hourly=wave_height,wave_period,sea_surface_temperature,sea_level_height_msl`,
+        `https://marine-api.open-meteo.com/v1/marine?${common}&forecast_days=8&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature,sea_level_height_msl,ocean_current_velocity,ocean_current_direction`,
         8000,
       ).catch(() => null),
     ])
@@ -55,6 +55,13 @@ export async function loadForecast(spot: Spot, force = false): Promise<Loaded | 
       temp: meteo.hourly.temperature_2m?.[i] ?? null,
       feels: meteo.hourly.apparent_temperature?.[i] ?? null,
       cloud: meteo.hourly.cloud_cover?.[i] ?? null,
+      windDir: meteo.hourly.wind_direction_10m?.[i] ?? null,
+      vis: meteo.hourly.visibility?.[i] ?? null,
+      uv: meteo.hourly.uv_index?.[i] ?? null,
+      pop: meteo.hourly.precipitation_probability?.[i] ?? null,
+      waveDir: mh?.wave_direction?.[i] ?? null,
+      current: mh?.ocean_current_velocity?.[i] ?? null,
+      currentDir: mh?.ocean_current_direction?.[i] ?? null,
       wave: mh?.wave_height?.[i] ?? null,
       wavePeriod: mh?.wave_period?.[i] ?? null,
       seaTemp: mh?.sea_surface_temperature?.[i] ?? null,

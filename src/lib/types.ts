@@ -11,6 +11,8 @@ export interface Spot {
   notes?: string
   /** Nature du fond / du lieu, pour l'icône et les infos du marqueur. */
   kind?: SpotKind
+  /** Cap (°) vers lequel le spot fait face à la mer, ex. 225 = face au sud-ouest ; absent = spot en pleine mer ou inconnu. */
+  facing?: number
   example?: boolean
 }
 
@@ -39,6 +41,13 @@ export interface HourPoint {
   temp?: number | null // °C, air
   feels?: number | null // °C, ressenti
   cloud?: number | null // %
+  windDir?: number | null // ° d'où vient le vent
+  vis?: number | null // m, visibilité atmosphérique
+  uv?: number | null
+  pop?: number | null // % probabilité de pluie
+  waveDir?: number | null // ° d'où vient la houle
+  current?: number | null // km/h (modèle, large)
+  currentDir?: number | null // ° vers où va le courant
 }
 
 export interface Sun {

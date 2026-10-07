@@ -247,3 +247,7 @@ img { -webkit-user-drag: none; user-select: none; }
 .pop .alt { background: transparent; color: #2f9bd8; border: 1px solid #2f9bd8; } .pop .note { color: #5a7a94; } .pop button + button { margin-top: 4px; }
 .editor { display: flex; flex-direction: column; gap: 8px; } .editor input, .editor textarea { width: 100%; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; } .chips button { padding: 6px 10px; border-radius: 999px; font-size: .85rem; } .chips .on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.conds { margin-top: 10px; } .conds .kv { font-size: .86rem; } .conds .kv span:last-child { text-align: right; }
+
+.vigi { border-width: 2px; } .vigi.v2 { border-color: #e6c200; } .vigi.v3 { border-color: #f08a24; background: color-mix(in srgb, #f08a24 14%, var(--card)); } .vigi.v4 { border-color: #e03b3b; background: color-mix(in srgb, #e03b3b 16%, var(--card)); }

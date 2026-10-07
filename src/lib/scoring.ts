@@ -1,3 +1,4 @@
+import { compass, swellFactor, windKind, WIND_LABEL } from './exposure'
 import { coefficientAt } from './tides'
 import { tideFlow } from './forecast'
 import type { Factor, Forecast, HourPoint, HourScore, Mode, Tide, WindUnit } from './types'
@@ -31,7 +32,14 @@ function past48(i: number, hours: HourPoint[]) {
   }
 }
 
-export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mode, unit: WindUnit = 'kmh'): HourScore {
+export interface ScoreContext {
+  /** Cap vers lequel le spot regarde la mer (°). */
+  facing?: number
+  /** Dernière chlorophylle satellite autour du spot. */
+  chl?: { value: number; ageDays: number }
+}
+
+export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mode, unit: WindUnit = 'kmh', ctx: ScoreContext = {}): HourScore {
   const hours = forecast.hours
   const h = hours[i]
   const factors: Factor[] = []
@@ -40,16 +48,22 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
     factors.push({ label, value: clamp(value), weight, note })
 
   const windEff = h.wind == null ? null : Math.max(h.wind, (h.gust ?? 0) * 0.7)
+  const kind = ctx.facing != null && h.windDir != null ? windKind(h.windDir, ctx.facing) : null
+  const windNote = `${fmtWind(h.wind ?? 0, unit)} (rafales ${fmtWind(h.gust ?? 0, unit)})${h.windDir != null ? ` · ${compass(h.windDir)}` : ''}${kind ? ` · ${WIND_LABEL[kind]}` : ''}`
+  // Houle ressentie : réduite si le spot est abrité de la direction d'où vient la houle.
+  const share = ctx.facing != null && h.waveDir != null ? swellFactor(h.waveDir, ctx.facing) : 1
+  const waveEff = h.wave == null ? null : h.wave * share
+  const waveNote = h.wave == null ? '' : `${h.wave.toFixed(1)} m${h.waveDir != null ? ` de ${compass(h.waveDir)}` : ''}${h.wavePeriod != null ? ` · ${h.wavePeriod.toFixed(0)} s` : ''}${share < 0.95 ? ` → ressentie ${waveEff!.toFixed(1)} m (${share < 0.7 ? 'abrité' : 'en partie abrité'})` : ''}`
   const flow = tideFlow(h.ts, tides)
   const sun = nearSun(h.ts, forecast)
   const hour = Number(new Date(h.ts * 1000).toLocaleString('fr-FR', { hour: '2-digit', hour12: false, timeZone: 'Europe/Paris' }))
 
   if (mode === 'bord') {
-    if (windEff != null) add('Vent', ramp(windEff, 12, 45), 2, `${fmtWind(h.wind!, unit)} (rafales ${fmtWind(h.gust ?? 0, unit)})`)
-    if (h.wave != null) {
-      const v = h.wave < 0.4 ? 0.8 : h.wave <= 1.2 ? 1 : ramp(h.wave, 1.2, 3)
-      add('Houle', v, 2, `${h.wave.toFixed(1)} m`)
-      if (h.wave > 2.5) warnings.push('Mer forte : reste loin des rochers exposés.')
+    if (windEff != null) add('Vent', ramp(windEff * (kind === 'mer' ? 1.15 : 1), 12, 45), 2, windNote)
+    if (waveEff != null) {
+      const v = waveEff < 0.4 ? 0.8 : waveEff <= 1.2 ? 1 : ramp(waveEff, 1.2, 3)
+      add('Houle', v, 2, waveNote)
+      if (waveEff > 2.5) warnings.push('Mer forte : reste loin des rochers exposés.')
     }
     if (flow != null) add('Marée', 0.4 + 0.6 * flow, 2, flow > 0.6 ? 'Eau en mouvement' : 'Proche de l’étale')
     add('Lumière', sun ? 1 : !h.isDay ? 0.6 : hour >= 11 && hour <= 15 ? 0.5 : 0.7, 1.5, sun === 'aube' ? 'Aube' : sun === 'crepuscule' ? 'Crépuscule' : h.isDay ? 'Plein jour' : 'Nuit')
@@ -58,17 +72,31 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
     const coef = coefficientAt(h.ts)
     add('Coefficient', coef >= 70 ? 1 : coef >= 50 ? 0.7 : 0.5, 1, `${coef}`)
   } else {
-    if (h.wave != null) {
-      add('Houle', ramp(h.wave, 0.3, 1.5), 2, `${h.wave.toFixed(1)} m`)
-      if (h.wave > 1) warnings.push('Mer formée : sortie déconseillée.')
+    if (waveEff != null) {
+      add('Houle', ramp(waveEff, 0.3, 1.5), 2, waveNote)
+      if (waveEff > 1) warnings.push('Mer formée : sortie déconseillée.')
     }
-    if (windEff != null) add('Vent', ramp(windEff, 10, 35), 2, `${fmtWind(h.wind!, unit)} (rafales ${fmtWind(h.gust ?? 0, unit)})`)
+    if (windEff != null) add('Vent', ramp(windEff * (kind === 'mer' ? 1.15 : 1), 10, 35), 2, windNote)
     if (windEff != null && windEff > 30) warnings.push('Vent fort : mise à l’eau et retour difficiles.')
+    if (kind === 'terre' && windEff != null && windEff > 15) warnings.push('Vent de terre : risque de dérive vers le large, reste près de la côte ou de ton bateau.')
+    if (h.current != null) {
+      add('Courant (modèle)', ramp(h.current, 1, 4), 1, `${h.current.toFixed(1)} km/h${h.currentDir != null ? ` vers ${compass(h.currentDir)}` : ''} · modèle large, les courants de marée côtiers sont plus forts`)
+      if (h.current > 4) warnings.push('Courant marqué : plongée à étale seulement.')
+    }
     if (flow != null) add('Courant', 1 - flow, 2, flow < 0.3 ? 'Étale, idéal' : flow > 0.8 ? 'Courant fort' : 'Courant modéré')
     const p = past48(i, hours)
     const waveV = p.maxWave == null ? null : ramp(p.maxWave, 0.8, 2.5) * 0.8 + 0.2
     const rainV = ramp(p.rain, 2, 20) * 0.8 + 0.2
-    add('Visibilité (estimée)', waveV == null ? rainV : (waveV + rainV) / 2, 2.5, `houle max 48 h : ${p.maxWave?.toFixed(1) ?? '?'} m · pluie 48 h : ${p.rain.toFixed(0)} mm`)
+    let vis = waveV == null ? rainV : (waveV + rainV) / 2
+    let visNote = `houle max 48 h : ${p.maxWave?.toFixed(1) ?? '?'} m · pluie 48 h : ${p.rain.toFixed(0)} mm`
+    const ahead = (h.ts - Date.now() / 1000) / 86400
+    // Chlorophylle satellite : valable pour aujourd'hui et les 3 jours suivants (l'eau change lentement), sinon on s'en passe.
+    if (ctx.chl && ahead < 3) {
+      const chlV = ramp(ctx.chl.value, 1.5, 8) * 0.8 + 0.2
+      vis = (vis + chlV) / 2
+      visNote += ` · chlorophylle ${ctx.chl.value.toFixed(1)} mg/m³ (il y a ${ctx.chl.ageDays} j)`
+    }
+    add('Visibilité (estimée)', vis, 2.5, visNote)
     if (!h.isDay) {
       add('Lumière', 0, 1, 'Nuit')
       warnings.push('Nuit : pas de plongée.')
@@ -83,10 +111,10 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
   return { ts: h.ts, score, factors, warnings }
 }
 
-export function scoreSeries(forecast: Forecast, tides: Tide[], mode: Mode, fromTs: number, unit: WindUnit = 'kmh'): HourScore[] {
+export function scoreSeries(forecast: Forecast, tides: Tide[], mode: Mode, fromTs: number, unit: WindUnit = 'kmh', ctx: ScoreContext = {}): HourScore[] {
   const out: HourScore[] = []
   forecast.hours.forEach((h, i) => {
-    if (h.ts >= fromTs - 3600) out.push(scoreHour(i, forecast, tides, mode, unit))
+    if (h.ts >= fromTs - 3600) out.push(scoreHour(i, forecast, tides, mode, unit, ctx))
   })
   return out
 }

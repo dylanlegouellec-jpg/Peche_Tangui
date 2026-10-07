@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SpotEditor, type SpotDraft } from '../components/SpotEditor'
 import { SpotsMap } from '../components/SpotsMap'
 import { addSpot, removeSpot, updateSpot } from '../lib/store'
+import { compass } from '../lib/exposure'
 import { SPOT_KINDS, type Spot } from '../lib/types'
 
 const getPosition = () => new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000 }))
@@ -11,8 +12,8 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
   const [editing, setEditing] = useState<SpotDraft | Spot | null>(null)
 
   async function save(d: SpotDraft) {
-    if (d.id != null) await updateSpot(d.id, { name: d.name, kind: d.kind, notes: d.notes, lat: d.lat, lon: d.lon })
-    else await addSpot({ name: d.name, lat: d.lat, lon: d.lon, kind: d.kind, notes: d.notes })
+    if (d.id != null) await updateSpot(d.id, { name: d.name, kind: d.kind, notes: d.notes, facing: d.facing, lat: d.lat, lon: d.lon })
+    else await addSpot({ name: d.name, lat: d.lat, lon: d.lon, kind: d.kind, notes: d.notes, facing: d.facing })
     setEditing(null)
   }
 
@@ -48,7 +49,7 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
                 <div className="row between">
                   <div>
                     <strong>{s.name}</strong> {s.kind && <span className="tag">{SPOT_KINDS[s.kind]}</span>}
-                    <div className="muted small">{s.lat.toFixed(4)}, {s.lon.toFixed(4)}</div>
+                    <div className="muted small">{s.lat.toFixed(4)}, {s.lon.toFixed(4)}{s.facing != null ? ` · face ${compass(s.facing)}` : ''}</div>
                   </div>
                   <button onClick={() => confirm(`Supprimer « ${s.name} » ?`) && removeSpot(s.id!)} aria-label="Supprimer">🗑</button>
                 </div>

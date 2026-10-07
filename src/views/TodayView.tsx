@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar } from '../components/Calendar'
 import { LiveTide } from '../components/LiveTide'
 import { depthAt, type Depth } from '../lib/bathy'
+import { fetchChlorophyll, waterLook, type Chlorophyll } from '../lib/chloro'
+import { fetchVigilance, type VigilanceDay } from '../lib/vigilance'
+import { compass, swellFactor, windKind, WIND_LABEL } from '../lib/exposure'
 import { PlanCard } from '../components/PlanCard'
 import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
 import { moonLabel } from '../lib/moon'
 import { coefficientAt, nearestStation, predictTides } from '../lib/tides'
 import { noonOf } from '../lib/astro'
-import { bestWindows, dayKey, dayLabel, scoreSeries } from '../lib/scoring'
+import { bestWindows, dayKey, dayLabel, fmtWind, scoreSeries } from '../lib/scoring'
 import type { Mode, Spot, WindUnit } from '../lib/types'
 
 const hhmm = (ts: number) => new Date(ts * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
@@ -31,6 +34,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
   const [day, setDay] = useState<string | null>(null)
   const [calendar, setCalendar] = useState(false)
   const [depth, setDepth] = useState<Depth | null>(null)
+  const [chl, setChl] = useState<Chlorophyll | null>(null)
+  const [vigilance, setVigilance] = useState<VigilanceDay[]>([])
   const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const pressed = useRef(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -80,6 +85,20 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
     }
   }, [spot?.lat, spot?.lon]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    setChl(null)
+    if (!spot) return
+    let cancelled = false
+    fetchChlorophyll(spot.lat, spot.lon).then((c) => !cancelled && setChl(c))
+    return () => {
+      cancelled = true
+    }
+  }, [spot?.lat, spot?.lon]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchVigilance().then(setVigilance)
+  }, [])
+
   const now = Math.floor(Date.now() / 1000)
   const stationInfo = useMemo(() => (spot ? nearestStation(spot.lat, spot.lon) : null), [spot])
   // Marées calculées d'après la jauge la plus proche (gratuit, hors ligne, valable à 16 jours) ; repli sur le modèle Open-Meteo si aucune jauge n'est proche.
@@ -89,7 +108,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
     if (stationInfo && stationInfo.distance < 120) return predictTides(stationInfo.station, hours[0].ts - 43200, hours[hours.length - 1].ts + 43200)
     return findTides(hours)
   }, [data, stationInfo])
-  const all = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, 0, windUnit) : []), [data, tides, mode, windUnit])
+  const all = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, 0, windUnit, { facing: spot?.facing, chl: chl ? { value: chl.value, ageDays: chl.ageDays } : undefined }) : []), [data, tides, mode, windUnit, spot?.facing, chl])
   const todayKey = dayKey(now)
   // 7 jours à partir d'aujourd'hui ; les créneaux déjà passés d'aujourd'hui sont ignorés.
   const allWindows = useMemo(() => bestWindows(all.filter((s) => s.ts >= now - 3600 && dayKey(s.ts) >= todayKey)), [all, now, todayKey])
@@ -160,6 +179,13 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
           </button>
         </div>
       </div>
+
+      {vigilance.filter((d) => d.level >= 2).map((d) => (
+        <div key={d.when} className={`card vigi v${d.level}`} role="alert">
+          <strong>Vigilance {d.color} {d.when}</strong>
+          <div className="small">{d.items.map((i) => `${i.phenomenon} (${i.color})`).join(', ') || 'Voir Météo-France'}</div>
+        </div>
+      ))}
 
       {data === undefined && <p className="muted">Chargement des prévisions…</p>}
       {data === null && <p className="card warn">Impossible de charger les prévisions et aucune donnée en cache. Reconnecte-toi une fois pour les télécharger.</p>}
@@ -232,6 +258,24 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
                   <span className="muted small">mm/h · {Math.round(rain24)} mm/24 h</span>
                 </div>
               </div>
+              {point && (
+                <div className="conds">
+                  {point.wind != null && (
+                    <div className="kv"><span className="muted">Vent</span><span>{fmtWind(point.wind, windUnit)} {point.windDir != null ? compass(point.windDir) : ''}{spot?.facing != null && point.windDir != null ? ` · ${WIND_LABEL[windKind(point.windDir, spot.facing)]}` : ''}</span></div>
+                  )}
+                  {point.wave != null && (
+                    <div className="kv"><span className="muted">Houle</span><span>{point.wave.toFixed(1)} m{point.waveDir != null ? ` de ${compass(point.waveDir)}` : ''}{point.wavePeriod != null ? ` · ${point.wavePeriod.toFixed(0)} s` : ''}{spot?.facing != null && point.waveDir != null && (point.waveDir != null && spot?.facing != null ? (swellFactor(point.waveDir, spot.facing) < 0.7 ? ' · spot abrité' : swellFactor(point.waveDir, spot.facing) < 0.95 ? ' · en partie abrité' : '') : '')}</span></div>
+                  )}
+                  {point.current != null && (
+                    <div className="kv"><span className="muted">Courant (modèle)</span><span>{point.current.toFixed(1)} km/h{point.currentDir != null ? ` vers ${compass(point.currentDir)}` : ''}</span></div>
+                  )}
+                  {chl && <div className="kv"><span className="muted">Eau (satellite)</span><span>{waterLook(chl.value)} · {chl.value.toFixed(1)} mg/m³ · il y a {chl.ageDays} j</span></div>}
+                  {(point.vis != null || point.uv != null || point.pop != null) && (
+                    <div className="kv"><span className="muted">Ciel</span><span>{point.vis != null ? `visibilité ${Math.round(point.vis / 1000)} km` : ''}{point.uv != null ? ` · UV ${point.uv.toFixed(0)}` : ''}{point.pop != null ? ` · pluie ${Math.round(point.pop)} %` : ''}</span></div>
+                  )}
+                  {spot && spot.facing == null && <p className="muted small">Indique l’orientation du spot (Spots → Modifier → « Face à la mer ») pour savoir si le vent vient de la mer ou de la terre.</p>}
+                </div>
+              )}
               {depth?.depth != null && (() => {
                 const pm = dayTides.filter((t) => t.type === 'haute').sort((a, b) => b.height - a.height)[0]
                 return <p className="muted small">Fond du spot : {depth.depth < 10 ? depth.depth.toFixed(1) : Math.round(depth.depth)} m au zéro des cartes{pm ? ` · ≈ ${(depth.depth + pm.height).toFixed(0)} m à pleine mer (${hhmm(pm.ts)})` : ''} <span className="muted">(indicatif, EMODnet)</span></p>

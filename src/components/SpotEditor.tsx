@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { depthAt, describeDepth, type Depth } from '../lib/bathy'
+import { depthAt, describeDepth, detectFacing, type Depth } from '../lib/bathy'
+import { compass } from '../lib/exposure'
 import { SPOT_KINDS, type Spot, type SpotKind } from '../lib/types'
 
 export interface SpotDraft {
@@ -10,6 +11,7 @@ export interface SpotDraft {
   lon: number
   kind?: SpotKind
   notes?: string
+  facing?: number
 }
 
 const getPosition = () => new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000 }))
@@ -19,6 +21,8 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
   const [name, setName] = useState(spot.name)
   const [kind, setKind] = useState<SpotKind | undefined>(spot.kind)
   const [notes, setNotes] = useState(spot.notes ?? '')
+  const [facing, setFacing] = useState<number | undefined>(spot.facing)
+  const [detecting, setDetecting] = useState(false)
   const [pos, setPos] = useState({ lat: spot.lat, lon: spot.lon })
   const [depth, setDepth] = useState<Depth | null | undefined>(undefined)
   const [error, setError] = useState('')
@@ -31,6 +35,15 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
       cancelled = true
     }
   }, [pos.lat, pos.lon])
+
+  async function detect() {
+    setDetecting(true)
+    setError('')
+    const r = await detectFacing(pos.lat, pos.lon)
+    setDetecting(false)
+    if (r) setFacing(Math.round(r.facing / 45) * 45 % 360)
+    else setError('Orientation non détectée : le spot est en pleine mer ou loin de la côte. Choisis-la à la main ou laisse « Aucune ».')
+  }
 
   async function here() {
     try {
@@ -50,7 +63,7 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
         onSubmit={(e) => {
           e.preventDefault()
           if (!name.trim()) return setError('Donne un nom au spot')
-          onSave({ id: (spot as Spot).id, name: name.trim(), kind, notes: notes.trim() || undefined, ...pos })
+          onSave({ id: (spot as Spot).id, name: name.trim(), kind, notes: notes.trim() || undefined, facing, ...pos })
         }}
       >
         <div className="grabber" />
@@ -62,6 +75,19 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
               {label}
             </button>
           ))}
+        </div>
+        <div>
+          <div className="row between">
+            <span>Face à la mer vers</span>
+            <button type="button" className="mini" onClick={detect} disabled={detecting}>{detecting ? 'Analyse…' : '🧭 Détecter'}</button>
+          </div>
+          <div className="chips" role="group" aria-label="Orientation du spot">
+            <button type="button" className={facing == null ? 'on' : ''} onClick={() => setFacing(undefined)}>Aucune</button>
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((d) => (
+              <button type="button" key={d} className={facing === d ? 'on' : ''} onClick={() => setFacing(d)}>{compass(d)}</button>
+            ))}
+          </div>
+          <p className="muted small">Sert à savoir si le vent vient de la mer ou de la terre, et si le spot est abrité de la houle.</p>
         </div>
         <textarea placeholder="Infos : fond, courant, accès, meilleur moment, appâts…" value={notes} onChange={(e) => setNotes(e.target.value)} />
         <div className="kv">

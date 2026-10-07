@@ -61,3 +61,26 @@ export function depthAt(lat: number, lon: number): Promise<Depth | null> {
 }
 
 export const describeDepth = (d: Depth | null) => (d == null ? 'indisponible' : d.depth != null ? `${d.depth < 10 ? d.depth.toFixed(1) : Math.round(d.depth)} m` : `à terre (altitude ${Math.round(d.altitude ?? 0)} m)`)
+
+/**
+ * Cherche vers où un spot « regarde » la mer : on sonde 12 points à ~1,2 km autour (grille EMODnet : eau ou terre)
+ * et on prend la direction moyenne de ceux qui sont en mer. Renvoie null si tout est mer (large) ou tout est terre.
+ */
+export async function detectFacing(lat: number, lon: number): Promise<{ facing: number; seaShare: number } | null> {
+  const R = 1.2 // km
+  const dirs = Array.from({ length: 12 }, (_, i) => i * 30)
+  const pts = await Promise.all(
+    dirs.map(async (b) => {
+      const dLat = (R / 111) * Math.cos((b * Math.PI) / 180)
+      const dLon = ((R / 111) * Math.sin((b * Math.PI) / 180)) / Math.cos((lat * Math.PI) / 180)
+      const d = await depthAt(lat + dLat, lon + dLon)
+      return d == null ? null : { bearing: b, sea: d.depth != null }
+    }),
+  )
+  const known = pts.filter((p): p is { bearing: number; sea: boolean } => p != null)
+  const sea = known.filter((p) => p.sea)
+  if (known.length < 8 || sea.length === 0 || sea.length === known.length) return null
+  const x = sea.reduce((n, p) => n + Math.sin((p.bearing * Math.PI) / 180), 0)
+  const y = sea.reduce((n, p) => n + Math.cos((p.bearing * Math.PI) / 180), 0)
+  return { facing: Math.round((((Math.atan2(x, y) * 180) / Math.PI) + 360) % 360), seaShare: sea.length / known.length }
+}
