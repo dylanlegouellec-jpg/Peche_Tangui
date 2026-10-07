@@ -45,11 +45,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const j = (await r.json()) as { product?: { periods?: Period[] } }
     const days = (j.product?.periods ?? []).map((p) => {
-      const d = p.timelaps?.domain_ids?.find((x) => x.domain_id === dep)
-      const items = (d?.phenomenon_items ?? [])
+      // Un département a deux « domaines » : le département (vent, pluie, orages…) et sa façade maritime « <dep>10 » (vagues-submersion).
+      const domains = (p.timelaps?.domain_ids ?? []).filter((x) => x.domain_id === dep || x.domain_id === `${dep}10`)
+      const items = domains
+        .flatMap((d) => d.phenomenon_items ?? [])
         .filter((i) => (i.phenomenon_max_color_id ?? 1) >= 2)
         .map((i) => ({ phenomenon: PHENOMENA[i.phenomenon_id ?? ''] ?? `phénomène ${i.phenomenon_id}`, level: i.phenomenon_max_color_id ?? 2, color: COLORS[i.phenomenon_max_color_id ?? 2] }))
-      return { when: p.echeance === 'J1' ? 'demain' : "aujourd'hui", level: d?.max_color_id ?? 1, color: COLORS[d?.max_color_id ?? 1], items }
+        .sort((a, b) => b.level - a.level)
+      const level = Math.max(1, ...domains.map((d) => d.max_color_id ?? 1), ...items.map((i) => i.level))
+      return { when: p.echeance === 'J1' ? 'demain' : "aujourd'hui", level, color: COLORS[level], items }
     })
     res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600')
     res.json({ configured: true, dep, days })
