@@ -35,7 +35,7 @@ export const getSyncState = () => state
 export const getSyncDebug = () => ({ cursor: Number(read(LS.cursor)) || null, lastPush: Number(read(LS.lastPush)) || null })
 export const subscribeSync = (l: () => void) => (listeners.add(l), () => void listeners.delete(l))
 
-async function api<T>(path: string, body: unknown, method = 'POST'): Promise<T> {
+export async function api<T>(path: string, body: unknown, method = 'POST'): Promise<T> {
   const token = read(LS.token)
   const r = await fetch(`/api/${path}`, {
     method,
@@ -62,6 +62,8 @@ export const login = (email: string, password: string) => api<{ token: string; e
 export const startSignup = (email: string, password: string) => api<{ sent: boolean }>('auth', { action: 'start', email, password })
 /** Étape 2 : le code reçu crée le compte et connecte. */
 export const verifySignup = (email: string, code: string) => api<{ token: string; email?: string }>('auth', { action: 'verify', email, code }).then((r) => signedIn(r, email))
+
+export const authToken = () => read(LS.token)
 
 export function logout() {
   Object.values(LS).forEach((k) => write(k, null))

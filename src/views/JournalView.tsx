@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { findTides, loadForecast } from '../lib/forecast'
 import { shrinkPhoto } from '../lib/photo'
 import { scoreSeries } from '../lib/scoring'
-import { addTrip, exportBackup, liveTrips, photoBlobs, removeTrip } from '../lib/store'
+import { addTrip, exportBackup, liveTrips, photoBlobs, removeTrip, setTripPrivate } from '../lib/store'
+import { FriendsView } from './FriendsView'
 import { SPECIES } from '../lib/species'
 import { StatsView } from './StatsView'
 import type { CatchItem, Mode, Settings, Spot, Trip } from '../lib/types'
@@ -67,6 +68,8 @@ export function JournalView({ spots, mode: defaultMode, settings }: { spots: Spo
   const [trips, setTrips] = useState<Trip[]>([])
   const [open, setOpen] = useState<Trip | null>(null)
   const [adding, setAdding] = useState(false)
+  const [tab, setTab] = useState<'mine' | 'friends'>('mine')
+  const [requests, setRequests] = useState(0)
 
   useEffect(() => {
     const sub = liveQuery(liveTrips).subscribe(setTrips)
@@ -78,6 +81,14 @@ export function JournalView({ spots, mode: defaultMode, settings }: { spots: Spo
 
   return (
     <section>
+      {!adding && (
+        <div className="seg full" role="group" aria-label="Journal">
+          <button className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>Mes sorties</button>
+          <button className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Amis{requests ? ` (${requests})` : ''}</button>
+        </div>
+      )}
+      {tab === 'friends' && !adding && <FriendsView onCount={setRequests} />}
+      {tab === 'mine' && (<>
       {adding ? (
         <TripForm spots={spots} defaultMode={defaultMode} onDone={() => setAdding(false)} />
       ) : (
@@ -98,12 +109,14 @@ export function JournalView({ spots, mode: defaultMode, settings }: { spots: Spo
           <Photos uids={t.photoUids.slice(0, 3)} />
           <div className="row">
             <button onClick={() => setOpen(t)}>Rapport</button>
+            <button onClick={() => setTripPrivate(t.id!, !t.private)} title={t.private ? 'Cachée à tes amis : toucher pour la partager' : 'Visible par tes amis : toucher pour la cacher'}>{t.private ? '🔒 Privée' : '👥 Partagée'}</button>
             <button onClick={() => confirm('Supprimer cette sortie ?') && removeTrip(t.id!)}>🗑</button>
           </div>
         </div>
       ))}
       </div>
       {!adding && trips.length === 0 && <p className="muted">Aucune sortie pour l’instant. Chaque sortie enregistrée garde aussi les conditions du moment, pour apprendre ce qui marche chez toi.</p>}
+      </>)}
     </section>
   )
 }
@@ -115,6 +128,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
   const [catches, setCatches] = useState<CatchItem[]>([])
   const [photos, setPhotos] = useState<Blob[]>([])
   const [notes, setNotes] = useState('')
+  const [hidden, setHidden] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const patch = (i: number, p: Partial<CatchItem>) => setCatches((c) => c.map((x, j) => (j === i ? { ...x, ...p } : x)))
@@ -136,7 +150,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
         snapshot = { airTemp: h.temp ?? null, wind: h.wind, wave: h.wave, seaTemp: h.seaTemp, pressure: h.pressure, score: sc?.score ?? null }
       }
     }
-    await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot })
+    await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot, private: hidden })
     onDone()
   }
 
@@ -166,6 +180,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
       </label>
       {photos.length > 0 && <Gallery blobs={photos} />}
       <textarea placeholder="Notes (appât, courant, comportement du poisson…)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <label className="row small"><input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> 🔒 Sortie privée (cachée à mes amis)</label>
       <div className="row">
         <button type="button" onClick={onDone}>Annuler</button>
         <button className="primary" disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>

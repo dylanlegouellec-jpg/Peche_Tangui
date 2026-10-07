@@ -105,6 +105,8 @@ export interface Trip {
   spotName: string
   mode: Mode
   notes?: string
+  /** Sortie cachée à mes amis. */
+  private?: boolean
   catches: CatchItem[]
   photoUids: string[]
   snapshot?: { airTemp?: number | null; wind: number | null; wave: number | null; seaTemp: number | null; pressure: number | null; score: number | null }

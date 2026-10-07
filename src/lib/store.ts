@@ -42,6 +42,7 @@ export interface NewTrip {
   catches: CatchItem[]
   photos: Blob[]
   snapshot?: Trip['snapshot']
+  private?: boolean
 }
 
 export async function addTrip(t: NewTrip) {
@@ -49,8 +50,13 @@ export async function addTrip(t: NewTrip) {
   const photoUids = t.photos.map(() => crypto.randomUUID())
   await db.transaction('rw', db.trips, db.photos, async () => {
     await db.photos.bulkAdd(t.photos.map((blob, i) => ({ uid: photoUids[i], tripUid: uid, blob, uploaded: 0 as const })))
-    await db.trips.add({ uid, updatedAt: Date.now(), date: t.date, spotId: t.spot.id!, spotUid: t.spot.uid, spotName: t.spot.name, mode: t.mode, notes: t.notes, catches: t.catches, photoUids, snapshot: t.snapshot })
+    await db.trips.add({ uid, updatedAt: Date.now(), date: t.date, spotId: t.spot.id!, spotUid: t.spot.uid, spotName: t.spot.name, mode: t.mode, notes: t.notes, catches: t.catches, photoUids, snapshot: t.snapshot, private: t.private || undefined })
   })
+  touch()
+}
+
+export async function setTripPrivate(id: number, value: boolean) {
+  await db.trips.update(id, { private: value || undefined, updatedAt: Date.now() })
   touch()
 }
 

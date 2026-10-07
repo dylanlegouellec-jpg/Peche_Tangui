@@ -270,3 +270,7 @@ img { -webkit-user-drag: none; user-select: none; }
 .rank .chip { min-width: 40px; text-align: center; padding: 4px 8px; border-radius: 999px; font-weight: 800; color: #fff; }
 .rank .chip.good { background: var(--good); } .rank .chip.mid { background: var(--mid); } .rank .chip.bad { background: var(--bad); }
 .invite { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); } .invite code { font-size: 1.05rem; font-weight: 700; letter-spacing: .02em; user-select: text; -webkit-user-select: text; }
+.friendrow { padding: 8px 0; border-top: 1px solid var(--line); gap: 8px; } .friendrow:first-of-type { border-top: 0; }
+.friendhead { gap: 10px; align-items: center; margin-bottom: 6px; }
+.avatar .ini { position: absolute; inset: 0; display: grid; place-items: center; z-index: 0; } .avatar img { position: relative; z-index: 1; }
+.avatar { position: relative; }

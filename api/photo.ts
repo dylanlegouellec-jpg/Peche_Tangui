@@ -7,7 +7,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!guard(req, res, 'GET')) return
     try {
       await ensureSchema()
-      const r = await db().query('select data from photos where uid = $1 and user_id = $2', [String(req.query.uid), userOf(req)])
+      // Mes photos, ou celles d'un ami (photo de profil, ou sortie non privée).
+      const r = await db().query(
+        `select p.data from photos p where p.uid = $1 and (p.user_id = $2 or (
+           exists (select 1 from friendships f where f.status = 'accepted' and ((f.user_a = $2 and f.user_b = p.user_id) or (f.user_b = $2 and f.user_a = p.user_id)))
+           and (p.trip_uid = 'profile' or exists (select 1 from trips t where t.uid = p.trip_uid and not t.deleted and coalesce(t.data->>'private', 'false') <> 'true'))))`,
+        [String(req.query.uid), userOf(req)],
+      )
       if (!r.rowCount) return void res.status(404).json({ error: 'Photo introuvable' })
       res.setHeader('Content-Type', 'image/jpeg')
       res.setHeader('Cache-Control', 'private, max-age=31536000, immutable')
