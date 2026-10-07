@@ -53,7 +53,7 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
   // Houle ressentie : réduite si le spot est abrité de la direction d'où vient la houle.
   const share = ctx.facing != null && h.waveDir != null ? swellFactor(h.waveDir, ctx.facing) : 1
   const waveEff = h.wave == null ? null : h.wave * share
-  const waveNote = h.wave == null ? '' : `${h.wave.toFixed(1)} m${h.waveDir != null ? ` de ${compass(h.waveDir)}` : ''}${h.wavePeriod != null ? ` · ${h.wavePeriod.toFixed(0)} s` : ''}${share < 0.95 ? ` → ressentie ${waveEff!.toFixed(1)} m (${share < 0.7 ? 'abrité' : 'en partie abrité'})` : ''}`
+  const waveNote = h.wave == null ? '' : `${h.wave.toFixed(1)} m${h.waveDir != null ? ` de ${compass(h.waveDir)}` : ''}${h.wavePeriod != null ? ` · ${h.wavePeriod.toFixed(0)} s` : ''}${h.waveSrc === 'cmems' ? ' · Copernicus 3 km' : ''}${share < 0.95 ? ` → ressentie ${waveEff!.toFixed(1)} m (${share < 0.7 ? 'abrité' : 'en partie abrité'})` : ''}`
   const flow = tideFlow(h.ts, tides)
   const sun = nearSun(h.ts, forecast)
   const hour = Number(new Date(h.ts * 1000).toLocaleString('fr-FR', { hour: '2-digit', hour12: false, timeZone: 'Europe/Paris' }))

@@ -48,6 +48,8 @@ export interface HourPoint {
   waveDir?: number | null // ° d'où vient la houle
   current?: number | null // km/h (modèle, large)
   currentDir?: number | null // ° vers où va le courant
+  curSrc?: 'cmems' // le courant vient de Copernicus (sinon Open-Meteo)
+  waveSrc?: 'cmems'
 }
 
 export interface Sun {

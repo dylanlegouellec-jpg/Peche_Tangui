@@ -4,6 +4,7 @@ import { LiveTide } from '../components/LiveTide'
 import { WebcamsCard } from '../components/WebcamsCard'
 import { depthAt, type Depth } from '../lib/bathy'
 import { fetchChlorophyll, waterLook, type Chlorophyll } from '../lib/chloro'
+import { fetchCmems, mergeCmems, type Cmems } from '../lib/cmems'
 import { fetchVigilance, type VigilanceDay } from '../lib/vigilance'
 import { compass, swellFactor, windKind, WIND_LABEL } from '../lib/exposure'
 import { PlanCard } from '../components/PlanCard'
@@ -30,7 +31,8 @@ interface Props {
 
 export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, forecastDays }: Props) {
   const spot = spots.find((s) => s.id === spotId) ?? spots[0]
-  const [data, setData] = useState<Loaded | null | undefined>(() => peekForecast(spot?.id))
+  const [rawData, setData] = useState<Loaded | null | undefined>(() => peekForecast(spot?.id))
+  const [cm, setCm] = useState<Cmems | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [day, setDay] = useState<string | null>(null)
   const [calendar, setCalendar] = useState(false)
@@ -41,8 +43,10 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
   const pressed = useRef(false)
   const [refreshing, setRefreshing] = useState(false)
   const sparkRef = useRef<HTMLDivElement>(null)
-  const dataRef = useRef(data)
-  dataRef.current = data
+  const dataRef = useRef(rawData)
+  dataRef.current = rawData
+  // Courant et houle de Copernicus (plus fins près de la côte) par-dessus Open-Meteo, dès qu'ils sont chargés
+  const data = useMemo(() => (rawData ? { ...rawData, forecast: mergeCmems(rawData.forecast, cm) } : rawData), [rawData, cm])
 
   // `force` = true : on ignore le cache de 15 min (bouton ↻, retour sur l'appli après un long moment, toutes les 30 min).
   const refresh = useCallback(
@@ -81,6 +85,16 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
     if (!spot) return
     let cancelled = false
     depthAt(spot.lat, spot.lon).then((d) => !cancelled && setDepth(d))
+    return () => {
+      cancelled = true
+    }
+  }, [spot?.lat, spot?.lon]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setCm(null)
+    if (!spot) return
+    let cancelled = false
+    fetchCmems(spot.lat, spot.lon).then((c) => !cancelled && setCm(c))
     return () => {
       cancelled = true
     }
@@ -265,11 +279,12 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
                     <div className="kv"><span className="muted">Vent</span><span>{fmtWind(point.wind, windUnit)} {point.windDir != null ? compass(point.windDir) : ''}{spot?.facing != null && point.windDir != null ? ` · ${WIND_LABEL[windKind(point.windDir, spot.facing)]}` : ''}</span></div>
                   )}
                   {point.wave != null && (
-                    <div className="kv"><span className="muted">Houle</span><span>{point.wave.toFixed(1)} m{point.waveDir != null ? ` de ${compass(point.waveDir)}` : ''}{point.wavePeriod != null ? ` · ${point.wavePeriod.toFixed(0)} s` : ''}{spot?.facing != null && point.waveDir != null && (point.waveDir != null && spot?.facing != null ? (swellFactor(point.waveDir, spot.facing) < 0.7 ? ' · spot abrité' : swellFactor(point.waveDir, spot.facing) < 0.95 ? ' · en partie abrité' : '') : '')}</span></div>
+                    <div className="kv"><span className="muted">Houle</span><span>{point.wave.toFixed(1)} m{point.waveDir != null ? ` de ${compass(point.waveDir)}` : ''}{point.wavePeriod != null ? ` · ${point.wavePeriod.toFixed(0)} s` : ''}{point.waveSrc ? ' · Copernicus' : ''}{spot?.facing != null && point.waveDir != null && (point.waveDir != null && spot?.facing != null ? (swellFactor(point.waveDir, spot.facing) < 0.7 ? ' · spot abrité' : swellFactor(point.waveDir, spot.facing) < 0.95 ? ' · en partie abrité' : '') : '')}</span></div>
                   )}
                   {point.current != null && (
-                    <div className="kv"><span className="muted">Courant (modèle)</span><span>{point.current.toFixed(1)} km/h{point.currentDir != null ? ` vers ${compass(point.currentDir)}` : ''}</span></div>
+                    <div className="kv"><span className="muted">Courant</span><span>{point.current.toFixed(1)} km/h{point.currentDir != null ? ` vers ${compass(point.currentDir)}` : ''}{point.curSrc ? ` · Copernicus (cellule à ${cm?.phy?.cell.km ?? '?'} km)` : ' · modèle large'}</span></div>
                   )}
+                  {cm?.bgc && <div className="kv"><span className="muted">Transparence (modèle)</span><span>≈ {cm.bgc.secchi.toFixed(0)} m · optimiste près des côtes (sans sédiments)</span></div>}
                   {chl && <div className="kv"><span className="muted">Eau (satellite)</span><span>{waterLook(chl.value)} · {chl.value.toFixed(1)} mg/m³ · il y a {chl.ageDays} j</span></div>}
                   {(point.vis != null || point.uv != null || point.pop != null) && (
                     <div className="kv"><span className="muted">Ciel</span><span>{point.vis != null ? `visibilité ${Math.round(point.vis / 1000)} km` : ''}{point.uv != null ? ` · UV ${point.uv.toFixed(0)}` : ''}{point.pop != null ? ` · pluie ${Math.round(point.pop)} %` : ''}</span></div>
