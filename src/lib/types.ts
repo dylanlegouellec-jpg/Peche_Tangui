@@ -9,7 +9,20 @@ export interface Spot {
   lat: number
   lon: number
   notes?: string
+  /** Nature du fond / du lieu, pour l'icône et les infos du marqueur. */
+  kind?: SpotKind
   example?: boolean
+}
+
+export type SpotKind = 'roche' | 'sable' | 'epave' | 'port' | 'plage' | 'autre'
+
+export const SPOT_KINDS: Record<SpotKind, string> = {
+  roche: '🪨 Roche',
+  sable: '🏖️ Sable',
+  epave: '⚓ Épave',
+  port: '🏗️ Port / digue',
+  plage: '🌊 Plage',
+  autre: '📍 Autre',
 }
 
 export interface HourPoint {

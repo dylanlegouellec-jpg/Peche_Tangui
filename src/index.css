@@ -214,8 +214,8 @@ img { -webkit-user-drag: none; user-select: none; }
 /* Carte des spots */
 .map { height: min(62dvh, 520px); border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin: 10px 0 6px; z-index: 0; -webkit-user-select: none; user-select: none; touch-action: none; background: var(--card); }
 .map .leaflet-container { font: inherit; }
-:root[data-theme='dark'] .map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) .map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8); } }
+:root[data-theme='dark'] .map .osm-base { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .map .osm-base { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.8); } }
 .pin { width: 34px; height: 34px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .4); background: #8a98a6; }
 .pin span { transform: rotate(45deg); color: #fff; font-weight: 800; font-size: .85rem; }
 .pin.good { background: #2fb673; } .pin.mid { background: #2f9bd8; }
@@ -234,3 +234,16 @@ img { -webkit-user-drag: none; user-select: none; }
 .tide-chart .pm { fill: var(--good); } .tide-chart .bm { fill: var(--mid); }
 .tide-chart .ext { fill: var(--muted); font-size: 8.5px; }
 .lg { display: inline-block; width: 18px; height: 0; border-top: 2.4px solid var(--accent); vertical-align: middle; margin: 0 3px 0 6px; } .pred-lg { border-top: 1.5px dashed var(--muted); }
+
+/* Relief marin : sélecteur de fond, légende, éditeur de spot */
+.mapwrap { position: relative; }
+.maplayers { position: absolute; z-index: 500; top: 20px; left: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); border-radius: 10px; }
+.maplayers button { padding: 6px 12px; font-size: .82rem; background: var(--card); }
+.maplayers .on { background: var(--accent); }
+.legend { position: absolute; z-index: 500; left: 10px; bottom: 30px; width: 190px; background: color-mix(in srgb, var(--card) 90%, transparent); padding: 5px 7px 4px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); pointer-events: none; }
+.lg-title { font-size: .6rem; color: var(--muted); margin-bottom: 2px; }
+.lg-bar { display: flex; height: 8px; border-radius: 3px; overflow: hidden; border: 1px solid rgba(0, 0, 0, .15); } .lg-bar span { flex: 1; }
+.lg-nums { display: flex; } .lg-nums span { flex: 1; font-size: .52rem; color: var(--muted); text-align: right; }
+.pop .alt { background: transparent; color: #2f9bd8; border: 1px solid #2f9bd8; } .pop .note { color: #5a7a94; } .pop button + button { margin-top: 4px; }
+.editor { display: flex; flex-direction: column; gap: 8px; } .editor input, .editor textarea { width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; } .chips button { padding: 6px 10px; border-radius: 999px; font-size: .85rem; } .chips .on { background: var(--accent); border-color: var(--accent); color: #fff; }

@@ -67,6 +67,8 @@ export function DiagnosticView() {
       probe('API (santé)', '/api/health'),
       probe('API (synchro)', '/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ since: Date.now() }) }),
       probe('Open-Meteo météo', 'https://api.open-meteo.com/v1/forecast?latitude=47.5&longitude=-3.1&hourly=wind_speed_10m&forecast_days=1'),
+      probe('SHOM REFMAR (mesures)', `https://services.data.shom.fr/maregraphie/observation/json/71?sources=1&dtStart=${new Date(Date.now() - 3600e3).toISOString().slice(0, 19)}Z&dtEnd=${new Date().toISOString().slice(0, 19)}Z`),
+      probe('EMODnet (profondeur)', 'https://ows.emodnet-bathymetry.eu/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo&LAYERS=emodnet:mean&QUERY_LAYERS=emodnet:mean&STYLES=&SRS=EPSG:4326&BBOX=-3.4005,47.4995,-3.3995,47.5005&WIDTH=101&HEIGHT=101&X=50&Y=50&INFO_FORMAT=application/json'),
       probe('Open-Meteo mer', 'https://marine-api.open-meteo.com/v1/marine?latitude=47.5&longitude=-3.1&hourly=wave_height&forecast_days=1'),
     ])
     setProbes(list)

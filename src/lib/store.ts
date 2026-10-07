@@ -6,7 +6,7 @@ const touch = () => scheduleSync()
 
 export const liveSpots = () => db.spots.toArray().then((l) => l.filter((s) => !s.deleted))
 
-export async function addSpot(s: Pick<Spot, 'name' | 'lat' | 'lon'>) {
+export async function addSpot(s: Pick<Spot, 'name' | 'lat' | 'lon'> & Partial<Pick<Spot, 'kind' | 'notes'>>) {
   await db.spots.add({ ...s, uid: crypto.randomUUID(), updatedAt: Date.now() })
   touch()
 }

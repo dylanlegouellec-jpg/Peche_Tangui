@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar } from '../components/Calendar'
 import { LiveTide } from '../components/LiveTide'
+import { depthAt, type Depth } from '../lib/bathy'
 import { PlanCard } from '../components/PlanCard'
 import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
 import { moonLabel } from '../lib/moon'
@@ -29,6 +30,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
   const [selected, setSelected] = useState<number | null>(null)
   const [day, setDay] = useState<string | null>(null)
   const [calendar, setCalendar] = useState(false)
+  const [depth, setDepth] = useState<Depth | null>(null)
   const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const pressed = useRef(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -67,6 +69,16 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
       clearInterval(timer)
     }
   }, [refresh])
+
+  useEffect(() => {
+    setDepth(null)
+    if (!spot) return
+    let cancelled = false
+    depthAt(spot.lat, spot.lon).then((d) => !cancelled && setDepth(d))
+    return () => {
+      cancelled = true
+    }
+  }, [spot?.lat, spot?.lon]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const now = Math.floor(Date.now() / 1000)
   const stationInfo = useMemo(() => (spot ? nearestStation(spot.lat, spot.lon) : null), [spot])
@@ -220,6 +232,10 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
                   <span className="muted small">mm/h · {Math.round(rain24)} mm/24 h</span>
                 </div>
               </div>
+              {depth?.depth != null && (() => {
+                const pm = dayTides.filter((t) => t.type === 'haute').sort((a, b) => b.height - a.height)[0]
+                return <p className="muted small">Fond du spot : {depth.depth < 10 ? depth.depth.toFixed(1) : Math.round(depth.depth)} m au zéro des cartes{pm ? ` · ≈ ${(depth.depth + pm.height).toFixed(0)} m à pleine mer (${hhmm(pm.ts)})` : ''} <span className="muted">(indicatif, EMODnet)</span></p>
+              })()}
               {dayTemps.length > 0 && <p className="muted small">Journée : {Math.round(Math.min(...dayTemps))}° à {Math.round(Math.max(...dayTemps))}° (air)</p>}
             </div>
           )}
