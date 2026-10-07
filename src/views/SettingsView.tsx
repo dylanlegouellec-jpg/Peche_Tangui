@@ -44,6 +44,43 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
+type Source = { name: string; use: string; note?: string }
+const SOURCE_GROUPS: { title: string; items: Source[] }[] = [
+  {
+    title: 'Météo & mer',
+    items: [
+      { name: 'Open-Meteo', use: 'Prévisions météo (vent, pluie, température, pression, nuages, UV) sur 16 jours et vagues sur 8 jours. Sert au score de chaque jour et à la grille heure par heure.' },
+      { name: 'Copernicus Marine (modèle IBI, ~3 km)', use: 'Courant marin, houle (hauteur, direction, période) et transparence de l’eau. Remplace la houle d’Open-Meteo quand disponible ; entre dans le score, surtout en plongée.', note: 'Les courants de marée très locaux (golfe, barre d’Étel) restent sous-estimés ; la transparence est optimiste près des côtes.' },
+      { name: 'NOAA CoastWatch (satellite VIIRS)', use: 'Chlorophylle de surface : indique une eau chargée ou claire, utilisée pour estimer la visibilité en plongée.', note: 'Peut manquer sous les nuages.' },
+      { name: 'Météo-France (Vigilance)', use: 'Bandeau d’alerte (vent violent, vagues-submersion, orages…) pour le Morbihan.' },
+    ],
+  },
+  {
+    title: 'Marées',
+    items: [
+      { name: 'REFMAR / SHOM (constantes harmoniques)', use: 'Calcul des marées dans l’appli : heures et hauteurs de pleine et basse mer, courbe, force du courant, coefficient. Fonctionne hors ligne et pour n’importe quelle date.', note: 'Marée astronomique : la météo (dépression, vent) n’est pas prise en compte.' },
+      { name: 'REFMAR / SHOM (marégraphes en direct)', use: 'Niveau d’eau réellement mesuré, comparé à la prédiction (écart dû à la météo).' },
+      { name: 'Coefficient de marée', use: 'Calculé d’après le marnage à Brest ; à 2-3 points près du chiffre officiel.' },
+    ],
+  },
+  {
+    title: 'Cartes & spots',
+    items: [
+      { name: 'OpenStreetMap & OpenSeaMap', use: 'Fond de carte, ports, balises et marques maritimes.' },
+      { name: 'EMODnet Bathymetry', use: 'Relief marin coloré par profondeur et profondeur au point d’un spot ; sert aussi à repérer l’exposition (côté ouvert ou abrité).', note: 'Profondeurs rapportées au zéro des cartes, indicatives.' },
+      { name: 'Windy Webcams', use: 'Webcams proches des spots pour voir l’état de la mer en direct.' },
+    ],
+  },
+  {
+    title: 'Dans l’appli',
+    items: [
+      { name: 'Calculs astronomiques', use: 'Lever et coucher du soleil, heures de lumière, phase et éclairement de la Lune.' },
+      { name: 'Score du jour', use: 'Combine vent, houle, courant, marée, lumière, pression, coefficient (et en plongée : visibilité, température de l’eau) selon le mode bord ou plongée. C’est une aide à la décision, pas une vérité.' },
+      { name: 'Stockage', use: 'Tes sorties, photos et spots sont enregistrés sur le téléphone (hors ligne) et sauvegardés en ligne si tu es connecté à ton compte (base Neon, hébergement Vercel).' },
+    ],
+  },
+]
+
 export function SettingsView({ settings, spots }: { settings: Settings; spots: Spot[] }) {
   const [page, setPage] = useState<Page | null>(null)
   const st = useSyncExternalStore(subscribeSync, getSyncState)
@@ -132,16 +169,25 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
         )}
         {page === 'diagnostic' && <DiagnosticView />}
         {page === 'about' && (
-          <div className="card">
-            <p>Prévisions météo et marines : <strong>Open-Meteo</strong>.</p>
-            <p className="muted small">Marées et coefficient sont <strong>calculés dans l’appli</strong> (marée astronomique, gratuit, hors ligne, valable pour n’importe quelle date) à partir des constantes harmoniques des jauges de marée REFMAR. Ils ne tiennent pas compte de la météo (une dépression ou un vent fort peut décaler la marée réelle). Le coefficient est calculé d’après Brest, à 2-3 points près de la valeur officielle du SHOM. La visibilité sous l’eau est une estimation.</p>
-            <p className="muted small">{TIDE_SOURCE}</p>
-            <p className="muted small">
-              Niveaux d’eau mesurés : marégraphes REFMAR du SHOM (Licence Ouverte Etalab). Relief marin et profondeurs : EMODnet Bathymetry (profondeurs rapportées au zéro des cartes, indicatives). Webcams : Windy.com. Chlorophylle de surface : satellite VIIRS, NOAA CoastWatch. Courants, houle et transparence : Copernicus Marine, modèle IBI (E.U. Copernicus Marine Service, maille d’environ 3 km, données ouvertes) ; à défaut, Open-Meteo. Même à 3 km, les courants de marée très localisés restent sous-estimés. Fonds de carte : © contributeurs OpenStreetMap et OpenSeaMap. Météo et mer : Open-Meteo.
-            </p>
-            <p className="muted small">Tailles minimales et espèces : valeurs indicatives, à vérifier avec la réglementation en vigueur.</p>
-            <p className="warn small">Ne te fie jamais uniquement à l’appli pour ta sécurité en mer. En chasse sous-marine : jamais seul, balise de surface obligatoire.</p>
-          </div>
+          <>
+            {SOURCE_GROUPS.map((g) => (
+              <div className="card" key={g.title}>
+                <h3 className="srcTitle">{g.title}</h3>
+                {g.items.map((it) => (
+                  <div className="srcItem" key={it.name}>
+                    <strong>{it.name}</strong>
+                    <span className="muted small">{it.use}</span>
+                    {it.note && <span className="muted small">⚠ {it.note}</span>}
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div className="card">
+              <p className="muted small">{TIDE_SOURCE}</p>
+              <p className="muted small">Tailles minimales et espèces : valeurs indicatives, à vérifier avec la réglementation en vigueur.</p>
+              <p className="warn small">Ne te fie jamais uniquement à l’appli pour ta sécurité en mer. En chasse sous-marine : jamais seul, balise de surface obligatoire.</p>
+            </div>
+          </>
         )}
       </section>
     )

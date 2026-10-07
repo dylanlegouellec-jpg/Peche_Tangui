@@ -258,3 +258,5 @@ img { -webkit-user-drag: none; user-select: none; }
 .cam img { width: 200px; height: 112px; object-fit: cover; border-radius: 10px; background: var(--bg); }
 .cam-t { font-weight: 600; font-size: .85rem; line-height: 1.2; }
 .cams a { color: var(--accent); }
+.srcTitle { margin: 0 0 6px; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.srcItem { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid var(--line); } .srcItem:first-of-type { border-top: 0; }
