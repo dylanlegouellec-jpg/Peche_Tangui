@@ -1,5 +1,12 @@
 {
   "functions": {
-    "api/cmems.ts": { "maxDuration": 30 }
+    "api/cmems.ts": {
+      "maxDuration": 30
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "claude/peche-app-v2": false
+    }
   }
 }
