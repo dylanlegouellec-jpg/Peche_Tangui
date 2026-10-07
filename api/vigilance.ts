@@ -32,12 +32,17 @@ interface Period {
  * La clé se met dans la variable d'environnement METEOFRANCE_API_KEY ; sans clé, la réponse est { configured: false }.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const key = process.env.METEOFRANCE_API_KEY
+  // Un retour à la ligne ou des guillemets collés avec la clé suffisent à la faire refuser : on nettoie.
+  const key = process.env.METEOFRANCE_API_KEY?.trim().replace(/^['"]|['"]$/g, '')
   if (!key) return void res.json({ configured: false })
   const dep = String(req.query.dep ?? '56').replace(/\D/g, '').slice(0, 3) || '56'
   try {
     const r = await fetch('https://public-api.meteofrance.fr/public/DPVigilance/v1/cartevigilance/encours', { headers: { apikey: key, accept: 'application/json' }, signal: AbortSignal.timeout(20000) })
-    if (!r.ok) return void res.status(502).json({ configured: true, error: `Météo-France HTTP ${r.status}` })
+    if (!r.ok) {
+      // Message d'erreur de Météo-France (ne contient jamais la clé) pour comprendre un refus
+      const detail = (await r.text().catch(() => '')).slice(0, 300)
+      return void res.status(502).json({ configured: true, error: `Météo-France HTTP ${r.status}`, keyLength: key.length, detail })
+    }
     const j = (await r.json()) as { product?: { periods?: Period[] } }
     const days = (j.product?.periods ?? []).map((p) => {
       const d = p.timelaps?.domain_ids?.find((x) => x.domain_id === dep)
