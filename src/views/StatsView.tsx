@@ -1,13 +1,14 @@
 import { liveQuery } from 'dexie'
 import { useEffect, useMemo, useState } from 'react'
 import { buildReport, shareOrDownload } from '../lib/pdf'
+import { computeInsights, MIN_TRIPS } from '../lib/insights'
 import { computeStats, yearsOf, type Filters } from '../lib/stats'
 import { liveTrips } from '../lib/store'
-import type { Mode, Settings, Trip } from '../lib/types'
+import type { Mode, Settings, Spot, Trip } from '../lib/types'
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 
-export function StatsView({ settings, defaultMode, onBack }: { settings: Settings; defaultMode: Mode; onBack: () => void }) {
+export function StatsView({ settings, defaultMode, spots, onBack }: { settings: Settings; defaultMode: Mode; spots: Spot[]; onBack: () => void }) {
   const [trips, setTrips] = useState<Trip[]>([])
   const [filters, setFilters] = useState<Filters>({ year: new Date().getFullYear(), mode: 'all' })
   const [busy, setBusy] = useState(false)
@@ -22,6 +23,7 @@ export function StatsView({ settings, defaultMode, onBack }: { settings: Setting
   // Si l'année choisie n'a aucune sortie (début de saison), on retombe sur « Toutes ».
   const year = filters.year === 'all' || years.includes(filters.year) ? filters.year : years[0] ?? 'all'
   const stats = useMemo(() => computeStats(trips, { ...filters, year }), [trips, filters, year])
+  const learned = useMemo(() => computeInsights(trips, spots), [trips, spots])
   const max = stats.species[0]?.count ?? 1
   const maxMonth = Math.max(...stats.months, 1)
   void defaultMode
@@ -106,6 +108,22 @@ export function StatsView({ settings, defaultMode, onBack }: { settings: Setting
             {stats.spots.map((s) => (
               <div className="win" key={s.name}><span>{s.name}</span><span className="muted">{s.trips} sortie{s.trips > 1 ? 's' : ''} · {s.catches} prise{s.catches > 1 ? 's' : ''}</span></div>
             ))}
+          </div>
+
+          <div className="card">
+            <h3>Ce que ton journal t’apprend</h3>
+            {learned.insights.length ? (
+              <>
+                {learned.insights.map((i) => (
+                  <p key={i.text} className={i.kind === 'good' ? '' : 'warn'}>{i.kind === 'good' ? '✅' : '⚠️'} {i.text}</p>
+                ))}
+                <p className="muted small">Calculé sur tes {learned.total} sorties, toutes années et tous types confondus. Plus tu en notes, plus c’est fiable ; avec peu de sorties, ce sont des tendances, pas des certitudes.</p>
+              </>
+            ) : learned.total < MIN_TRIPS ? (
+              <p className="muted small">Encore {MIN_TRIPS - learned.total} sortie{MIN_TRIPS - learned.total > 1 ? 's' : ''} dans le journal (même bredouilles) pour que l’appli repère ce qui marche chez toi : marée, heure, vent, coefficient, lune.</p>
+            ) : (
+              <p className="muted small">Pas encore de tendance nette dans tes {learned.total} sorties.</p>
+            )}
           </div>
 
           {stats.avg.seaTemp != null && (

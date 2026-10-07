@@ -74,7 +74,7 @@ export function JournalView({ spots, mode: defaultMode, settings }: { spots: Spo
   }, [])
 
   if (open) return <Report trip={open} onClose={() => setOpen(null)} />
-  if (stats) return <StatsView settings={settings} defaultMode={defaultMode} onBack={() => setStats(false)} />
+  if (stats) return <StatsView settings={settings} defaultMode={defaultMode} spots={spots} onBack={() => setStats(false)} />
 
   return (
     <section>

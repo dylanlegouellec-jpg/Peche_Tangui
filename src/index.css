@@ -264,3 +264,8 @@ img { -webkit-user-drag: none; user-select: none; }
 .leaflet-control-attribution.attr-fold::before { content: 'ⓘ'; font-size: 15px; line-height: 24px; display: block; text-align: center; width: 24px; color: #333; }
 .leaflet-control-attribution.attr-fold.open { width: auto; max-width: 80vw; padding: 3px 8px 3px 26px; font-size: 11px; border-radius: 10px; white-space: normal; opacity: 1; }
 .leaflet-control-attribution.attr-fold.open::before { position: absolute; left: 0; top: 0; }
+.rank { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 4px; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: inherit; font: inherit; }
+.rank:first-of-type { border-top: 0; } .rank.on .rn { font-weight: 700; }
+.rank .rk { color: var(--muted); font-weight: 700; text-align: center; } .rank .rn { display: flex; flex-direction: column; }
+.rank .chip { min-width: 40px; text-align: center; padding: 4px 8px; border-radius: 999px; font-weight: 800; color: #fff; }
+.rank .chip.good { background: var(--good); } .rank .chip.mid { background: var(--mid); } .rank .chip.bad { background: var(--bad); }

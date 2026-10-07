@@ -7,6 +7,7 @@ import { fetchChlorophyll, waterLook, type Chlorophyll } from '../lib/chloro'
 import { fetchCmems, mergeCmems, type Cmems } from '../lib/cmems'
 import { fetchVigilance, type VigilanceDay } from '../lib/vigilance'
 import { compass, swellFactor, windKind, WIND_LABEL } from '../lib/exposure'
+import { BestSpots } from '../components/BestSpots'
 import { PlanCard } from '../components/PlanCard'
 import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
 import { moonLabel } from '../lib/moon'
@@ -229,6 +230,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
               <span className="dw">Date</span>
             </button>
           </div>
+
+          <BestSpots spots={spots} mode={mode} unit={windUnit} dayKey={activeDay} label={isToday ? 'aujourd’hui' : daysAhead(activeDay) === 1 ? 'demain' : `le ${dayLabel(noonOf(activeDay))}`} current={spot?.id} onPick={setSpotId} />
 
           {inRange && focus ? (
           <div className="today-grid">
