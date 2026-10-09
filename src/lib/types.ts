@@ -13,10 +13,12 @@ export interface Spot {
   kind?: SpotKind
   /** Cap (°) vers lequel le spot fait face à la mer, ex. 225 = face au sud-ouest ; absent = spot en pleine mer ou inconnu. */
   facing?: number
+  /** Simple marqueur personnel (coin à homard, bon coin…) : posé sur la carte, sans prévisions. */
+  pin?: boolean
   example?: boolean
 }
 
-export type SpotKind = 'roche' | 'sable' | 'epave' | 'port' | 'plage' | 'autre'
+export type SpotKind = 'roche' | 'sable' | 'epave' | 'port' | 'plage' | 'autre' | 'homard' | 'crabe' | 'poisson'
 
 export const SPOT_KINDS: Record<SpotKind, string> = {
   roche: '🪨 Roche',
@@ -25,7 +27,15 @@ export const SPOT_KINDS: Record<SpotKind, string> = {
   port: '🏗️ Port / digue',
   plage: '🌊 Plage',
   autre: '📍 Autre',
+  homard: '🦞 Coin à homard',
+  crabe: '🦀 Coin à crabes',
+  poisson: '🐟 Bon coin poisson',
 }
+
+/** Natures proposées selon qu'il s'agit d'un spot avec prévisions ou d'un simple marqueur. */
+export const SPOT_KIND_CHOICES: SpotKind[] = ['roche', 'sable', 'epave', 'port', 'plage', 'autre']
+export const PIN_KIND_CHOICES: SpotKind[] = ['homard', 'crabe', 'poisson', 'roche', 'epave', 'autre']
+export const kindEmoji = (k?: SpotKind) => (k ? SPOT_KINDS[k].split(' ')[0] : '📍')
 
 export interface HourPoint {
   ts: number // unix secondes

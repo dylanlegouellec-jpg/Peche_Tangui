@@ -3,7 +3,7 @@ import { SpotEditor, type SpotDraft } from '../components/SpotEditor'
 import { SpotsMap } from '../components/SpotsMap'
 import { addSpot, removeSpot, updateSpot } from '../lib/store'
 import { compass } from '../lib/exposure'
-import { SPOT_KINDS, type Spot } from '../lib/types'
+import { SPOT_KINDS, kindEmoji, type Spot } from '../lib/types'
 
 const getPosition = () => new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000 }))
 
@@ -12,8 +12,8 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
   const [editing, setEditing] = useState<SpotDraft | Spot | null>(null)
 
   async function save(d: SpotDraft) {
-    if (d.id != null) await updateSpot(d.id, { name: d.name, kind: d.kind, notes: d.notes, facing: d.facing, lat: d.lat, lon: d.lon })
-    else await addSpot({ name: d.name, lat: d.lat, lon: d.lon, kind: d.kind, notes: d.notes, facing: d.facing })
+    if (d.id != null) await updateSpot(d.id, { name: d.name, kind: d.kind, notes: d.notes, facing: d.facing, lat: d.lat, lon: d.lon, pin: d.pin })
+    else await addSpot({ name: d.name, lat: d.lat, lon: d.lon, kind: d.kind, notes: d.notes, facing: d.facing, pin: d.pin })
     setEditing(null)
   }
 
@@ -35,8 +35,8 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
 
       {view === 'map' && (
         <>
-          <SpotsMap spots={spots} onOpen={onOpenSpot} onAdd={(lat, lon) => setEditing({ name: '', lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) })} onEdit={setEditing} />
-          <p className="muted small">Pastilles : vert = prises, bleu = sorties sans prise, gris = pas encore pêché. Touche la carte pour connaître la profondeur, appui long pour créer un spot.</p>
+          <SpotsMap spots={spots} onOpen={onOpenSpot} onAdd={(lat, lon) => setEditing({ name: '', lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) })} onMark={(lat, lon, accuracy) => setEditing({ name: '', lat, lon, accuracy, pin: true, kind: 'homard' })} onEdit={setEditing} />
+          <p className="muted small">Pastilles : vert = prises, bleu = sorties sans prise, gris = pas encore pêché. Touche la carte pour connaître la profondeur, appui long pour créer un spot. ◎ montre ta position, 📌 pose un marqueur (violet) exactement là où tu es : coin à homard, bon coin…</p>
         </>
       )}
 
@@ -44,7 +44,7 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
         <>
           <button className="primary wide" onClick={() => setEditing({ name: '', lat: 47.6, lon: -3.15 })}>+ Nouveau spot</button>
           <div className="cols-2">
-            {spots.map((s) => (
+            {spots.filter((s) => !s.pin).map((s) => (
               <div className="card" key={s.id}>
                 <div className="row between">
                   <div>
@@ -57,6 +57,25 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
                 <div className="row">
                   <button onClick={() => setEditing(s)}>✎ Modifier / infos</button>
                   <button onClick={() => moveHere(s)}>📍 Placer ici</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {spots.some((s) => s.pin) && <h3 className="sec">Coins marqués</h3>}
+          <div className="cols-2">
+            {spots.filter((s) => s.pin).map((s) => (
+              <div className="card" key={s.id}>
+                <div className="row between">
+                  <div>
+                    <strong>{kindEmoji(s.kind)} {s.name}</strong>
+                    <div className="muted small">{s.lat.toFixed(5)}, {s.lon.toFixed(5)}</div>
+                  </div>
+                  <button onClick={() => confirm(`Supprimer « ${s.name} » ?`) && removeSpot(s.id!)} aria-label="Supprimer">🗑</button>
+                </div>
+                {s.notes && <div className="small muted">{s.notes}</div>}
+                <div className="row">
+                  <button onClick={() => setEditing(s)}>✎ Modifier / infos</button>
+                  <a className="btnlink" href={`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`} target="_blank" rel="noopener">Itinéraire</a>
                 </div>
               </div>
             ))}

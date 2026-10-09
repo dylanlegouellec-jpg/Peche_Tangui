@@ -67,7 +67,9 @@ export default function App() {
   }
 
   const currentMode = mode ?? settings.defaultMode
-  const currentSpot = spotId ?? spots.find((s) => s.uid === settings.defaultSpotUid)?.id
+  // Les marqueurs personnels (coin à homard…) n'ont pas de prévisions : ils restent sur la carte.
+  const places = spots.filter((s) => !s.pin)
+  const currentSpot = spotId ?? places.find((s) => s.uid === settings.defaultSpotUid)?.id
 
   return (
     <div className="shell">
@@ -82,17 +84,17 @@ export default function App() {
         <div className="app">
           <div className={`page ${dir}`} key={tab}>
         {tab === 'settings' ? (
-          <SettingsView settings={settings} spots={spots} />
+          <SettingsView settings={settings} spots={places} />
         ) : tab === 'spots' ? (
           <SpotsView spots={spots} onOpenSpot={(id) => { setSpotId(id); changeTab('today') }} />
-        ) : spots.length === 0 ? (
+        ) : places.length === 0 ? (
           <p className="muted">Ajoute un spot pour commencer.</p>
         ) : tab === 'today' ? (
-          <TodayView spots={spots} spotId={currentSpot} setSpotId={setSpotId} mode={currentMode} setMode={setMode} windUnit={settings.windUnit} forecastDays={settings.forecastDays} showRanking={!!settings.showRanking} />
+          <TodayView spots={places} spotId={currentSpot} setSpotId={setSpotId} mode={currentMode} setMode={setMode} windUnit={settings.windUnit} forecastDays={settings.forecastDays} showRanking={!!settings.showRanking} />
         ) : tab === 'species' ? (
           <SpeciesView mode={currentMode} />
         ) : (
-          <JournalView spots={spots} mode={currentMode} settings={settings} />
+          <JournalView spots={places} mode={currentMode} settings={settings} />
         )}
           </div>
         </div>
