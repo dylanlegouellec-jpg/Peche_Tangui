@@ -3,7 +3,7 @@ import type { Forecast } from './types'
 // Copernicus Marine, modèle IBI (golfe de Gascogne, maille ~3 km) : courants, houle et transparence de l'eau, plus fins que Open-Meteo près de la côte.
 export interface CmemsPhysics {
   cell: { lat: number; lon: number; km: number }
-  rows: { ts: number; speed: number | null; dir: number | null; temp: number | null }[]
+  rows: { ts: number; speed: number | null; dir: number | null; temp: number | null; front?: number | null }[]
 }
 export interface CmemsWaves {
   cell: { lat: number; lon: number; km: number }
@@ -46,6 +46,7 @@ export function mergeCmems(forecast: Forecast, cm: Cmems | null): Forecast {
     return {
       ...h,
       ...(c && c.speed != null ? { current: c.speed, currentDir: c.dir, curSrc: 'cmems' as const } : {}),
+      ...(c && c.front != null ? { front: c.front } : {}),
       ...(w && w.h != null ? { wave: w.h, waveDir: w.dir ?? h.waveDir, wavePeriod: w.per ?? h.wavePeriod, waveSrc: 'cmems' as const } : {}),
     }
   })

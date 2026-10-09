@@ -75,7 +75,9 @@ const SOURCE_GROUPS: { title: string; items: Source[] }[] = [
     title: 'Dans l’appli',
     items: [
       { name: 'Calculs astronomiques', use: 'Lever et coucher du soleil, heures de lumière, phase et éclairement de la Lune.' },
-      { name: 'Score du jour', use: 'Combine vent, houle, courant, marée, lumière, pression, coefficient (et en plongée : visibilité, température de l’eau) selon le mode bord ou plongée. C’est une aide à la décision, pas une vérité.' },
+      { name: 'Score du jour (0 à 100)', use: 'Moyenne pondérée, heure par heure, de critères différents pour le bord et pour la plongée. Bord : vent, houle, marée en mouvement, lumière (aube et crépuscule), pression, coefficient. Plongée : visibilité estimée, houle, vent, courant de marée, lumière, température de l’eau.' },
+      { name: 'Présence de poisson (dans le score)', use: 'Température de l’eau (zone où le poisson est actif) et sa tendance sur 48 h (un réchauffement est favorable, un coup de froid défavorable), et front thermique : un fort écart de température entre mailles voisines marque la rencontre d’eaux chaude et froide, où le poisson chasse.', note: 'Ce sont des indices, pas une mesure : aucune source gratuite ne détecte le poisson.' },
+      { name: 'Ton historique (dans le score)', use: 'À partir de 12 sorties du même type dans ton carnet, l’appli regarde dans quelles conditions (heure, marée, coefficient, lune, vent, houle, eau) tu as pris du poisson, et ajoute ou retire jusqu’à 10 points aux heures qui y ressemblent. Les cas avec peu de sorties comptent peu.', note: 'Même les sorties bredouilles servent : note-les toutes.' },
       { name: 'Stockage', use: 'Tes sorties, photos et spots sont enregistrés sur le téléphone (hors ligne) et sauvegardés en ligne si tu es connecté à ton compte (base Neon, hébergement Vercel).' },
     ],
   },

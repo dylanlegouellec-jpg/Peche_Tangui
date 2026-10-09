@@ -1,8 +1,11 @@
+import { liveQuery } from 'dexie'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar } from '../components/Calendar'
 import { LiveTide } from '../components/LiveTide'
 import { WebcamsCard } from '../components/WebcamsCard'
 import { depthAt, type Depth } from '../lib/bathy'
+import { buildHistory } from '../lib/insights'
+import { liveTrips } from '../lib/store'
 import { fetchChlorophyll, waterLook, type Chlorophyll } from '../lib/chloro'
 import { fetchCmems, mergeCmems, type Cmems } from '../lib/cmems'
 import { fetchVigilance, type VigilanceDay } from '../lib/vigilance'
@@ -14,7 +17,7 @@ import { moonLabel } from '../lib/moon'
 import { coefficientAt, nearestStation, predictTides } from '../lib/tides'
 import { noonOf } from '../lib/astro'
 import { bestWindows, dayKey, dayLabel, fmtWind, scoreSeries } from '../lib/scoring'
-import type { Mode, Spot, WindUnit } from '../lib/types'
+import type { Mode, Spot, Trip, WindUnit } from '../lib/types'
 
 const hhmm = (ts: number) => new Date(ts * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
 const dayShort = (ts: number) => new Date(ts * 1000).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'Europe/Paris' })
@@ -41,6 +44,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
   const [depth, setDepth] = useState<Depth | null>(null)
   const [chl, setChl] = useState<Chlorophyll | null>(null)
   const [vigilance, setVigilance] = useState<VigilanceDay[]>([])
+  const [trips, setTrips] = useState<Trip[]>([])
   const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const pressed = useRef(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -116,6 +120,11 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
     fetchVigilance().then(setVigilance)
   }, [])
 
+  useEffect(() => {
+    const sub = liveQuery(liveTrips).subscribe(setTrips)
+    return () => sub.unsubscribe()
+  }, [])
+
   const now = Math.floor(Date.now() / 1000)
   const stationInfo = useMemo(() => (spot ? nearestStation(spot.lat, spot.lon) : null), [spot])
   // Marées calculées d'après la jauge la plus proche (gratuit, hors ligne, valable à 16 jours) ; repli sur le modèle Open-Meteo si aucune jauge n'est proche.
@@ -125,7 +134,9 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
     if (stationInfo && stationInfo.distance < 120) return predictTides(stationInfo.station, hours[0].ts - 43200, hours[hours.length - 1].ts + 43200)
     return findTides(hours)
   }, [data, stationInfo])
-  const all = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, 0, windUnit, { facing: spot?.facing, chl: chl ? { value: chl.value, ageDays: chl.ageDays } : undefined }) : []), [data, tides, mode, windUnit, spot?.facing, chl])
+  // Ce qui a réussi lors de tes sorties passées ajuste le score (de 10 points au plus), dès 12 sorties du même type
+  const history = useMemo(() => buildHistory(trips, spots, mode), [trips, spots, mode])
+  const all = useMemo(() => (data ? scoreSeries(data.forecast, tides, mode, 0, windUnit, { facing: spot?.facing, chl: chl ? { value: chl.value, ageDays: chl.ageDays } : undefined, history: history ?? undefined }) : []), [data, tides, mode, windUnit, spot?.facing, chl, history])
   const todayKey = dayKey(now)
   // 7 jours à partir d'aujourd'hui ; les créneaux déjà passés d'aujourd'hui sont ignorés.
   const allWindows = useMemo(() => bestWindows(all.filter((s) => s.ts >= now - 3600 && dayKey(s.ts) >= todayKey)), [all, now, todayKey])

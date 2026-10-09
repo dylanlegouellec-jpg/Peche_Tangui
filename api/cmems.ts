@@ -109,8 +109,23 @@ async function physics(lat: number, lon: number) {
   const { raw, n, iy, ix, r } = await readBlock(a, ['uo', 'vo', 'thetao'], lat, lon, t0, t1)
   const cell = pickCell(a, raw[0], n, iy, ix, r, lat, lon, ti - t0)
   if (!cell) return null
-  const rows: { ts: number; speed: number | null; dir: number | null; temp: number | null }[] = []
+  const rows: { ts: number; speed: number | null; dir: number | null; temp: number | null; front: number | null }[] = []
+  // Taille d'une maille en km (nord-sud, est-ouest) pour mesurer les écarts de température
+  const dyKm = Math.abs(a.lat[iy + 1] - a.lat[iy]) * 111
+  const dxKm = Math.abs(a.lon[ix + 1] - a.lon[ix]) * 111 * Math.cos((lat * Math.PI) / 180)
   for (let h = 0; h < t1 - t0; h++) {
+    const base = h * n * n
+    // Front thermique : plus fort écart de température entre deux mailles d'eau voisines, en °C par km, sur la fenêtre de ±9 km
+    let front: number | null = null
+    for (let y = 0; y < n; y++)
+      for (let x = 0; x < n; x++) {
+        const t = val(raw[2], base + y * n + x, 0.001, 10)
+        if (t == null) continue
+        const e = x + 1 < n ? val(raw[2], base + y * n + x + 1, 0.001, 10) : null
+        const s = y + 1 < n ? val(raw[2], base + (y + 1) * n + x, 0.001, 10) : null
+        if (e != null) front = Math.max(front ?? 0, Math.abs(e - t) / dxKm)
+        if (s != null) front = Math.max(front ?? 0, Math.abs(s - t) / dyKm)
+      }
     const k = h * n * n + cell.y * n + cell.x
     const u = val(raw[0], k, 0.001, 0)
     const v = val(raw[1], k, 0.001, 0)
@@ -119,6 +134,7 @@ async function physics(lat: number, lon: number) {
       speed: u == null || v == null ? null : +(Math.hypot(u, v) * 3.6).toFixed(2),
       dir: u == null || v == null ? null : Math.round(((Math.atan2(u, v) * 180) / Math.PI + 360) % 360),
       temp: val(raw[2], k, 0.001, 10),
+      front: front == null ? null : +front.toFixed(3),
     })
   }
   return { cell: { lat: cell.cellLat, lon: cell.cellLon, km: +cell.distKm.toFixed(1) }, rows }

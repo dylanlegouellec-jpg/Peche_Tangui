@@ -32,11 +32,32 @@ function past48(i: number, hours: HourPoint[]) {
   }
 }
 
+/** Ajustement tiré de l'historique de sorties de l'utilisateur : points à ajouter au score (négatifs possibles) et explication. */
+export type HistoryAdjust = (h: HourPoint, tides: Tide[]) => { pts: number; note: string } | null
+
 export interface ScoreContext {
+  /** Ce qui a réussi lors des sorties précédentes (voir insights.ts). */
+  history?: HistoryAdjust
   /** Cap vers lequel le spot regarde la mer (°). */
   facing?: number
   /** Dernière chlorophylle satellite autour du spot. */
   chl?: { value: number; ageDays: number }
+}
+
+/** Eau et poisson : plage de température où le poisson est actif, et tendance sur 48 h (une eau qui se réchauffe est favorable, un coup de froid fige le poisson). */
+function waterActivity(i: number, hours: HourPoint[]): { value: number; note: string } | null {
+  const t = hours[i].seaTemp
+  if (t == null) return null
+  const level = t < 9 ? 0.2 : t < 12 ? 0.2 + ((t - 9) / 3) * 0.8 : t <= 19 ? 1 : t <= 22 ? 0.85 : 0.6
+  let j = Math.max(0, i - 48)
+  while (j < i && hours[j].seaTemp == null) j++
+  const before = hours[j].seaTemp
+  const span = i - j
+  if (before == null || span < 24) return { value: level, note: `${t.toFixed(1)} °C` }
+  const d = ((t - before) / span) * 48
+  const trend = d >= 0.7 ? 1 : d >= -0.5 ? 0.75 : d >= -1.5 ? 0.5 : 0.3
+  const word = d >= 0.7 ? 'se réchauffe' : d >= -0.5 ? 'stable' : d >= -1.5 ? 'se refroidit' : 'chute brutale'
+  return { value: level * 0.55 + trend * 0.45, note: `${t.toFixed(1)} °C · ${d >= 0 ? '+' : ''}${d.toFixed(1)} °C en 48 h (${word})` }
 }
 
 export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mode, unit: WindUnit = 'kmh', ctx: ScoreContext = {}): HourScore {
@@ -104,10 +125,24 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
     if (h.seaTemp != null) add('Eau', ramp(h.seaTemp, 16, 11) * 0.7 + 0.3, 0.5, `${h.seaTemp.toFixed(1)} °C`)
   }
 
+  // Poisson : température et tendance de l'eau, front thermique (là où se rencontrent eaux chaude et froide, le poisson chasse)
+  const water = waterActivity(i, hours)
+  if (water) add('Eau (poisson)', water.value, 1.5, water.note)
+  if (h.front != null) {
+    const f = h.front
+    add('Front thermique', f >= 0.25 ? 1 : f >= 0.15 ? 0.8 : 0.6, 1, f >= 0.25 ? `front marqué (${f.toFixed(2)} °C/km) : zone de chasse probable` : f >= 0.15 ? `front modéré (${f.toFixed(2)} °C/km)` : `pas de front net (${f.toFixed(2)} °C/km) · Copernicus 3 km`)
+  }
+
   const total = factors.reduce((s, f) => s + f.weight, 0)
   let score = total ? Math.round((factors.reduce((s, f) => s + f.value * f.weight, 0) / total) * 100) : 0
   // Sans houle ni marée (prévisions au-delà de 8 jours), le score est ramené vers le neutre : il ne peut pas être « parfait ».
   if (h.wave == null) score = Math.round(score * 0.7 + 50 * 0.3)
+  // Ton historique : bonus ou malus selon ce qui a réussi lors de tes sorties dans des conditions semblables
+  const adj = ctx.history?.(h, tides)
+  if (adj && adj.pts !== 0) {
+    score = Math.max(0, Math.min(100, score + adj.pts))
+    factors.push({ label: 'Ton historique', value: clamp(0.5 + adj.pts / 20), weight: 0, note: `${adj.pts > 0 ? '+' : ''}${adj.pts} pts · ${adj.note}` })
+  }
   return { ts: h.ts, score, factors, warnings }
 }
 

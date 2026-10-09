@@ -58,6 +58,8 @@ export interface HourPoint {
   waveDir?: number | null // ° d'où vient la houle
   current?: number | null // km/h (modèle, large)
   currentDir?: number | null // ° vers où va le courant
+  /** Front thermique autour du spot : plus fort écart de température de l'eau entre deux mailles voisines (°C/km, Copernicus). */
+  front?: number | null
   curSrc?: 'cmems' // le courant vient de Copernicus (sinon Open-Meteo)
   waveSrc?: 'cmems'
 }
