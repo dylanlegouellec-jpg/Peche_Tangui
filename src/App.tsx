@@ -4,7 +4,8 @@ import { Avatar } from './components/Avatar'
 import { TabBar, type Tab } from './components/TabBar'
 import { loadSettings, seedSpots } from './lib/db'
 import { liveSpots } from './lib/store'
-import { startAutoSync } from './lib/sync'
+import { getSyncState, startAutoSync, subscribeSync } from './lib/sync'
+import { listFriends } from './lib/friends'
 import { DEFAULT_SETTINGS, type Mode, type Settings, type Spot } from './lib/types'
 import { JournalView } from './views/JournalView'
 import { SettingsView } from './views/SettingsView'
@@ -33,6 +34,21 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [spotId, setSpotId] = useState<number>()
   const [mode, setMode] = useState<Mode>()
+  // Demandes d'amis en attente : pastille sur l'onglet Carnet (vérifié au lancement, au retour sur l'appli et toutes les 10 min)
+  const [requests, setRequests] = useState(0)
+  useEffect(() => {
+    const check = () => (getSyncState().loggedIn && navigator.onLine ? listFriends().then((l) => setRequests(l.incoming.length), () => undefined) : setRequests(0))
+    check()
+    const unsub = subscribeSync(() => !getSyncState().loggedIn && setRequests(0))
+    const onVisible = () => document.visibilityState === 'visible' && check()
+    document.addEventListener('visibilitychange', onVisible)
+    const t = setInterval(check, 10 * 60 * 1000)
+    return () => {
+      unsub()
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(t)
+    }
+  }, [])
 
   useEffect(() => {
     seedSpots().then(startAutoSync)
@@ -94,12 +110,12 @@ export default function App() {
         ) : tab === 'species' ? (
           <SpeciesView mode={currentMode} />
         ) : (
-          <JournalView spots={places} mode={currentMode} settings={settings} />
+          <JournalView spots={places} mode={currentMode} settings={settings} onRequests={setRequests} />
         )}
           </div>
         </div>
       </main>
-      <TabBar tab={tab} onChange={changeTab} />
+      <TabBar tab={tab} onChange={changeTab} badges={{ journal: requests }} />
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   )

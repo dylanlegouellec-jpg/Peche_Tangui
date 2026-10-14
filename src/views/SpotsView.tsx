@@ -12,8 +12,8 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
   const [editing, setEditing] = useState<SpotDraft | Spot | null>(null)
 
   async function save(d: SpotDraft) {
-    if (d.id != null) await updateSpot(d.id, { name: d.name, kind: d.kind, notes: d.notes, facing: d.facing, lat: d.lat, lon: d.lon, pin: d.pin })
-    else await addSpot({ name: d.name, lat: d.lat, lon: d.lon, kind: d.kind, notes: d.notes, facing: d.facing, pin: d.pin })
+    if (d.id != null) await updateSpot(d.id, { name: d.name, kind: d.kind, notes: d.notes, facing: d.facing, lat: d.lat, lon: d.lon, pin: d.pin, cams: d.cams })
+    else await addSpot({ name: d.name, lat: d.lat, lon: d.lon, kind: d.kind, notes: d.notes, facing: d.facing, pin: d.pin, cams: d.cams })
     setEditing(null)
   }
 
@@ -49,7 +49,7 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
                 <div className="row between">
                   <div>
                     <strong>{s.name}</strong> {s.kind && <span className="tag">{SPOT_KINDS[s.kind]}</span>}
-                    <div className="muted small">{s.lat.toFixed(4)}, {s.lon.toFixed(4)}{s.facing != null ? ` · face ${compass(s.facing)}` : ''}</div>
+                    <div className="muted small">{s.lat.toFixed(4)}, {s.lon.toFixed(4)}{s.facing != null ? ` · face ${compass(s.facing)}` : ''}{s.cams?.length ? ` · 📹 ${s.cams.length}` : ''}</div>
                   </div>
                   <button onClick={() => confirm(`Supprimer « ${s.name} » ?`) && removeSpot(s.id!)} aria-label="Supprimer">🗑</button>
                 </div>

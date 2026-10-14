@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { depthAt, describeDepth, detectFacing, type Depth } from '../lib/bathy'
 import { useEditing } from '../lib/editing'
 import { compass } from '../lib/exposure'
-import { PIN_KIND_CHOICES, SPOT_KINDS, SPOT_KIND_CHOICES, type Spot, type SpotKind } from '../lib/types'
+import { camKind, camLabel, checkCamUrl } from '../lib/mycams'
+import { PIN_KIND_CHOICES, SPOT_KINDS, SPOT_KIND_CHOICES, type MyCam, type Spot, type SpotKind } from '../lib/types'
 
 export interface SpotDraft {
   id?: number
@@ -15,6 +16,7 @@ export interface SpotDraft {
   facing?: number
   /** Marqueur personnel sans prévisions. */
   pin?: boolean
+  cams?: MyCam[]
   /** Précision du GPS en mètres, quand la position vient du GPS. */
   accuracy?: number
 }
@@ -34,6 +36,18 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
   const [accuracy, setAccuracy] = useState<number | undefined>((spot as SpotDraft).accuracy)
   const pin = !!(spot as SpotDraft).pin
   useEditing()
+  const [cams, setCams] = useState<MyCam[]>(spot.cams ?? [])
+  const [camName, setCamName] = useState('')
+  const [camUrl, setCamUrl] = useState('')
+  const [camError, setCamError] = useState('')
+  function addCam() {
+    const err = checkCamUrl(camUrl)
+    if (err) return setCamError(err)
+    setCams([...cams, { name: camName.trim() || 'Webcam', url: camUrl.trim() }])
+    setCamName('')
+    setCamUrl('')
+    setCamError('')
+  }
 
   useEffect(() => {
     setDepth(undefined)
@@ -72,7 +86,7 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
         onSubmit={(e) => {
           e.preventDefault()
           if (!name.trim()) return setError(pin ? 'Donne un nom à ce coin' : 'Donne un nom au spot')
-          onSave({ id: (spot as Spot).id, name: name.trim(), kind, notes: notes.trim() || undefined, facing: pin ? undefined : facing, pin: pin || undefined, ...pos })
+          onSave({ id: (spot as Spot).id, name: name.trim(), kind, notes: notes.trim() || undefined, facing: pin ? undefined : facing, pin: pin || undefined, cams: cams.length ? cams : undefined, ...pos })
         }}
       >
         <div className="grabber" />
@@ -101,6 +115,22 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
         </div>
         )}
         <textarea placeholder={pin ? 'Profondeur, fond, casiers posés, appât, accès, date de la prise…' : 'Infos : fond, courant, accès, meilleur moment, appâts…'} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <div className="camlist">
+          <strong>Mes webcams</strong>
+          {cams.map((c, i) => (
+            <div className="row" key={`${i}-${c.url}`}>
+              <span className="grow">📹 {c.name} <span className="muted small">· {camLabel[camKind(c.url).kind]}</span></span>
+              <button type="button" className="mini" onClick={() => setCams(cams.filter((_, j) => j !== i))} aria-label={`Retirer ${c.name}`}>✕</button>
+            </div>
+          ))}
+          <input placeholder="Nom (ex. Plage de Portivy)" value={camName} onChange={(e) => setCamName(e.target.value)} />
+          <div className="row">
+            <input className="grow" type="url" inputMode="url" placeholder="Lien https://… (image, YouTube ou page)" value={camUrl} onChange={(e) => setCamUrl(e.target.value)} autoCapitalize="off" autoCorrect="off" />
+            <button type="button" onClick={addCam} disabled={!camUrl.trim()}>Ajouter</button>
+          </div>
+          {camError && <p className="warn small">{camError}</p>}
+          <p className="muted small">Colle le lien d’une webcam : une image en direct (.jpg) s’affiche et se rafraîchit chaque minute, un direct YouTube se lit dans l’appli, toute autre page s’ouvre d’un appui. Elles apparaissent sur l’écran du jour de ce spot.</p>
+        </div>
         <div className="kv">
           <span className="muted">Position</span>
           <span>{pos.lat.toFixed(5)}, {pos.lon.toFixed(5)}{accuracy != null ? ` · ± ${accuracy} m` : ''}</span>

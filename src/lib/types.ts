@@ -13,9 +13,16 @@ export interface Spot {
   kind?: SpotKind
   /** Cap (°) vers lequel le spot fait face à la mer, ex. 225 = face au sud-ouest ; absent = spot en pleine mer ou inconnu. */
   facing?: number
+  /** Webcams ajoutées à la main pour ce spot (image en direct, live YouTube ou page web). */
+  cams?: MyCam[]
   /** Simple marqueur personnel (coin à homard, bon coin…) : posé sur la carte, sans prévisions. */
   pin?: boolean
   example?: boolean
+}
+
+export interface MyCam {
+  name: string
+  url: string
 }
 
 export type SpotKind = 'roche' | 'sable' | 'epave' | 'port' | 'plage' | 'autre' | 'homard' | 'crabe' | 'poisson'

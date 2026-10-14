@@ -321,3 +321,9 @@ img { -webkit-user-drag: none; user-select: none; }
 .stack { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .danger-link { margin-top: 10px; padding: 4px 0; border: 0; background: none; color: var(--bad); font-size: .85rem; text-decoration: underline; }
 button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+.cam.wide { width: 260px; } .cam.wide img, .cam.wide iframe { width: 260px; height: 146px; border: 0; border-radius: 10px; background: var(--bg); object-fit: cover; }
+.cam.link .cam-ph { width: 200px; height: 112px; border-radius: 10px; background: var(--bg); display: grid; place-items: center; font-size: 2rem; }
+.camlist { display: flex; flex-direction: column; gap: 6px; }
+.camlist .row { gap: 6px; align-items: center; } .camlist .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-badge { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--bad); color: #fff; font-size: .65rem; font-weight: 800; line-height: 17px; text-align: center; }
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) { .tabbar .tab-badge { left: 30px; top: 8px; } }

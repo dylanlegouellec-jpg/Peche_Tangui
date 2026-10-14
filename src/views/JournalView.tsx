@@ -64,7 +64,7 @@ function Report({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   )
 }
 
-export function JournalView({ spots, mode: defaultMode, settings }: { spots: Spot[]; mode: Mode; settings: Settings }) {
+export function JournalView({ spots, mode: defaultMode, settings, onRequests }: { spots: Spot[]; mode: Mode; settings: Settings; onRequests?: (n: number) => void }) {
   const [stats, setStats] = useState(false)
   const [trips, setTrips] = useState<Trip[]>([])
   const [open, setOpen] = useState<Trip | null>(null)
@@ -88,7 +88,7 @@ export function JournalView({ spots, mode: defaultMode, settings }: { spots: Spo
           <button className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Amis{requests ? ` (${requests})` : ''}</button>
         </div>
       )}
-      {tab === 'friends' && !adding && <FriendsView onCount={setRequests} />}
+      {tab === 'friends' && !adding && <FriendsView onCount={(n) => { setRequests(n); onRequests?.(n) }} />}
       {tab === 'mine' && (<>
       {adding ? (
         <TripForm spots={spots} defaultMode={defaultMode} onDone={() => setAdding(false)} />

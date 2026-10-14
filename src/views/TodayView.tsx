@@ -222,6 +222,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
 
       {data === undefined && <p className="muted">Chargement des prévisions…</p>}
       {data === null && <p className="card warn">Impossible de charger les prévisions et aucune donnée en cache. Reconnecte-toi une fois pour les télécharger.</p>}
+      {/* Sans prévisions, les webcams restent utiles pour voir l'état de la mer */}
+      {data === null && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} mine={spot.cams} />}
 
       {data && (
         <>
@@ -397,7 +399,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
             ))}
           </div>
 
-          {isToday && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} />}
+          {isToday && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} mine={spot.cams} />}
           {isToday && spot && <LiveTide lat={spot.lat} lon={spot.lon} />}
 
           <div className="card">
