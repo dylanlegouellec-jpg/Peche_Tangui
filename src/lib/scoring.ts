@@ -77,7 +77,8 @@ export function scoreHour(i: number, forecast: Forecast, tides: Tide[], mode: Mo
   const waveNote = h.wave == null ? '' : `${h.wave.toFixed(1)} m${h.waveDir != null ? ` de ${compass(h.waveDir)}` : ''}${h.wavePeriod != null ? ` · ${h.wavePeriod.toFixed(0)} s` : ''}${h.waveSrc === 'cmems' ? ' · Copernicus 3 km' : ''}${share < 0.95 ? ` → ressentie ${waveEff!.toFixed(1)} m (${share < 0.7 ? 'abrité' : 'en partie abrité'})` : ''}`
   const flow = tideFlow(h.ts, tides)
   const sun = nearSun(h.ts, forecast)
-  const hour = Number(new Date(h.ts * 1000).toLocaleString('fr-FR', { hour: '2-digit', hour12: false, timeZone: 'Europe/Paris' }))
+  // « en-GB » renvoie « 14 » (en français ce serait « 14 h », illisible pour Number)
+  const hour = Number(new Date(h.ts * 1000).toLocaleString('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Europe/Paris' })) % 24
 
   if (mode === 'bord') {
     if (windEff != null) add('Vent', ramp(windEff * (kind === 'mer' ? 1.15 : 1), 12, 45), 2, windNote)

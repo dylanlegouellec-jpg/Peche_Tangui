@@ -30,8 +30,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (typeof d.uid !== 'string' || typeof d.updatedAt !== 'number') continue
           await client.query(
             `insert into ${t} (uid, data, updated_at, synced_at, deleted, user_id) values ($1, $2, $3, $4, $5, $6)
-             on conflict (uid) do update set data = excluded.data, updated_at = excluded.updated_at, synced_at = excluded.synced_at, deleted = excluded.deleted
-             where ${t}.updated_at < excluded.updated_at and ${t}.user_id = excluded.user_id`,
+             on conflict (user_id, uid) do update set data = excluded.data, updated_at = excluded.updated_at, synced_at = excluded.synced_at, deleted = excluded.deleted
+             where ${t}.updated_at < excluded.updated_at`,
             [d.uid, JSON.stringify(d.data ?? {}), d.updatedAt, now, !!d.deleted, user],
           )
         }

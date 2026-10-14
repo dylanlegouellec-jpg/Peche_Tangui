@@ -5,8 +5,13 @@ import pg from 'pg'
 let pool: pg.Pool | undefined
 export const db = () => (pool ??= new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3, ssl: process.env.PGSSL === 'off' ? false : undefined }))
 
-const SCHEMA = `
-create table if not exists app_user (id int primary key check (id = 1), pass_hash text not null);
+/**
+ * Migrations de la base, appliquées une seule fois chacune (numéro gardé dans schema_version).
+ * Au démarrage, le serveur ne fait plus qu'une lecture rapide du numéro ; les modifications ne tournent que s'il en manque.
+ */
+const MIGRATIONS = [
+  // 1 : schéma complet tel qu'il existait jusqu'ici (instructions sans effet si déjà appliquées)
+  `create table if not exists app_user (id int primary key check (id = 1), pass_hash text not null);
 alter table app_user add column if not exists email text;
 create table if not exists users (id serial primary key, email text unique, pass_hash text not null, code_hash text);
 insert into users (id, email, pass_hash) select 1, email, pass_hash from app_user on conflict do nothing;
@@ -27,10 +32,43 @@ create unique index if not exists app_settings_user on app_settings (user_id);
 create table if not exists friendships (user_a int not null, user_b int not null, requester int not null, status text not null, created_at bigint not null, primary key (user_a, user_b));
 create table if not exists invites (code_hash text primary key, created_by int not null, created_at bigint not null, expires_at bigint not null, used_by int);
 create index if not exists spots_synced on spots (user_id, synced_at);
-create index if not exists trips_synced on trips (user_id, synced_at);
-`
+create index if not exists trips_synced on trips (user_id, synced_at);`,
+  // 2 : un même identifiant peut exister dans deux comptes (spots de départ communs à tous) ; un code ne crée qu'un compte
+  `alter table spots drop constraint if exists spots_pkey;
+alter table spots add primary key (user_id, uid);
+alter table trips drop constraint if exists trips_pkey;
+alter table trips add primary key (user_id, uid);
+do $$ begin
+  create unique index if not exists users_code_hash on users (code_hash) where code_hash is not null;
+exception when unique_violation then raise notice 'codes en double : index ignoré';
+end $$;`,
+]
+
+async function migrate() {
+  const client = await db().connect()
+  try {
+    await client.query('create table if not exists schema_version (v int not null)')
+    const cur = Number((await client.query('select max(v) as v from schema_version')).rows[0].v ?? 0)
+    if (cur >= MIGRATIONS.length) return
+    await client.query('begin')
+    // Verrou : si deux serveurs démarrent en même temps, un seul applique les migrations
+    await client.query('select pg_advisory_xact_lock(424242)')
+    const now = Number((await client.query('select max(v) as v from schema_version')).rows[0].v ?? 0)
+    for (let v = now + 1; v <= MIGRATIONS.length; v++) {
+      await client.query(MIGRATIONS[v - 1])
+      await client.query('insert into schema_version (v) values ($1)', [v])
+    }
+    await client.query('commit')
+  } catch (e) {
+    await client.query('rollback').catch(() => undefined)
+    throw e
+  } finally {
+    client.release()
+  }
+}
+
 let ready: Promise<unknown> | undefined
-export const ensureSchema = () => (ready ??= db().query(SCHEMA).catch((e) => ((ready = undefined), Promise.reject(e))))
+export const ensureSchema = () => (ready ??= migrate().catch((e) => ((ready = undefined), Promise.reject(e))))
 
 const secret = () => {
   const s = process.env.JWT_SECRET

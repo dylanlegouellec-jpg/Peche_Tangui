@@ -46,7 +46,7 @@ db.version(3)
 
 // Spots de départ (Morbihan), identifiants fixes pour ne pas être dupliqués d'un appareil à l'autre.
 // Coordonnées approximatives : à ajuster sur place avec « Placer ici ».
-const DEFAULT_SPOTS: Omit<Spot, 'id' | 'updatedAt'>[] = [
+export const DEFAULT_SPOTS: Omit<Spot, 'id' | 'updatedAt'>[] = [
   { uid: 'seed-maguero', name: 'Roche du Maguero', lat: 47.69, lon: -3.27, notes: 'Position approximative, à corriger sur place.' },
   { uid: 'seed-etel', name: 'Port d’Étel', lat: 47.6577, lon: -3.201 },
   { uid: 'seed-portivy', name: 'Portivy', lat: 47.5294, lon: -3.1444 },

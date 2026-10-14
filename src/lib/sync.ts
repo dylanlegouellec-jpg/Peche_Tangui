@@ -1,4 +1,4 @@
-import { db } from './db'
+import { db, DEFAULT_SPOTS } from './db'
 import type { Spot, Trip } from './types'
 
 const LS = { token: 'peche-token', email: 'peche-email', cursor: 'peche-cursor', lastPush: 'peche-last-push', lastSync: 'peche-last-sync' }
@@ -25,6 +25,10 @@ export interface SyncState {
   last: number | null
   error?: string
 }
+// Compte auquel appartiennent les données de ce téléphone (gardé après déconnexion, pour ne jamais mélanger deux comptes).
+const OWNER = 'peche-owner'
+if (read(LS.token) && read(LS.email) && !read(OWNER)) write(OWNER, read(LS.email))
+
 let state: SyncState = { loggedIn: !!read(LS.token), email: read(LS.email), status: 'idle', last: Number(read(LS.lastSync)) || null }
 const listeners = new Set<() => void>()
 const set = (p: Partial<SyncState>) => {
@@ -43,14 +47,33 @@ export async function api<T>(path: string, body: unknown, method = 'POST'): Prom
     body: method === 'GET' ? undefined : JSON.stringify(body),
   })
   if (r.status === 401 && token) {
-    write(LS.token, null)
+    // Session expirée : on repart de zéro pour la prochaine connexion (un autre compte ne doit pas reprendre le curseur de celui-ci)
+    for (const k of [LS.token, LS.cursor, LS.lastPush]) write(k, null)
     set({ loggedIn: false, email: null, status: 'idle' })
   }
   if (!r.ok) throw new Error(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? `Erreur ${r.status}`)
   return r.json()
 }
 
+/** Retire de ce téléphone les données d'un autre compte (elles restent sauvegardées dans ce compte-là) et remet les spots de départ. */
+async function clearLocalData() {
+  await db.transaction('rw', db.spots, db.trips, db.photos, db.settings, async () => {
+    await Promise.all([db.spots.clear(), db.trips.clear(), db.photos.clear(), db.settings.delete('main')])
+    await db.spots.bulkAdd(DEFAULT_SPOTS.map((s) => ({ ...s, updatedAt: 1 })))
+  })
+}
+
 async function signedIn(res: { token: string; email?: string }, email: string) {
+  const account = (res.email ?? email).toLowerCase()
+  const owner = read(OWNER)
+  if (owner && owner.toLowerCase() !== account) {
+    const ok = confirm(`Ce téléphone contient les données de ${owner}. Elles vont être retirées de ce téléphone (elles restent sauvegardées dans son compte) avant de charger celles de ${account}. Continuer ?`)
+    if (!ok) throw new Error('Connexion annulée')
+    await clearLocalData()
+  }
+  write(OWNER, account)
+  write(LS.cursor, null)
+  write(LS.lastPush, null)
   write(LS.token, res.token)
   write(LS.email, res.email ?? email)
   set({ loggedIn: true, email: res.email ?? email, error: undefined })
@@ -65,7 +88,9 @@ export const createInvite = () => api<{ code: string; expiresAt: number }>('auth
 
 export const authToken = () => read(LS.token)
 
-export function logout() {
+export async function logout() {
+  // Dernière synchro pour ne rien perdre (sans bloquer si le réseau manque)
+  await syncNow().catch(() => undefined)
   Object.values(LS).forEach((k) => write(k, null))
   set({ loggedIn: false, email: null, status: 'idle', last: null, error: undefined })
 }
@@ -90,6 +115,8 @@ const blobToBase64 = (b: Blob) =>
     r.readAsDataURL(b)
   })
 
+/** Photos introuvables sur le serveur, à ne pas redemander à chaque synchro. */
+const missing = new Set<string>()
 let running = false
 let again = false
 
@@ -108,9 +135,17 @@ export async function syncNow() {
     const sRow = await db.settings.get('main')
 
     // Photos d'abord, pour que le serveur les ait quand une sortie arrive.
+    // Une photo qui échoue ne bloque pas le reste : elle sera retentée à la prochaine synchro.
+    let failed = 0
     for (const p of await db.photos.where('uploaded').equals(0).toArray()) {
-      await api('photo', { uid: p.uid, tripUid: p.tripUid, data: await blobToBase64(p.blob) })
-      await db.photos.update(p.uid, { uploaded: 1 })
+      try {
+        await api('photo', { uid: p.uid, tripUid: p.tripUid, data: await blobToBase64(p.blob) })
+        await db.photos.update(p.uid, { uploaded: 1 })
+      } catch (e) {
+        if (!read(LS.token)) throw e // session expirée : inutile de continuer
+        failed++
+        console.warn(`Photo ${p.uid} non envoyée :`, e)
+      }
     }
 
     const res = await api<{ cursor: number; spots: Doc[]; trips: Doc[]; settings: { data: unknown; updatedAt: number } | null }>('sync', {
@@ -143,9 +178,10 @@ export async function syncNow() {
 
     // Photos reçues d'un autre appareil : sorties et photo de profil.
     const fetchPhoto = async (uid: string, tripUid: string) => {
-      if (await db.photos.get(uid)) return
-      const r = await fetch(`/api/photo?uid=${encodeURIComponent(uid)}`, { headers: { Authorization: `Bearer ${read(LS.token)}` } })
-      if (r.ok) await db.photos.put({ uid, tripUid, blob: await r.blob(), uploaded: 1 })
+      if (missing.has(uid) || (await db.photos.get(uid))) return
+      const r = await fetch(`/api/photo?uid=${encodeURIComponent(uid)}`, { headers: { Authorization: `Bearer ${read(LS.token)}` } }).catch(() => null)
+      if (r?.ok) await db.photos.put({ uid, tripUid, blob: await r.blob(), uploaded: 1 })
+      else if (r?.status === 404) missing.add(uid) // absente du serveur : on ne la redemande plus pendant cette session
     }
     for (const t of await db.trips.toArray()) {
       if (!t.deleted) for (const uid of t.photoUids) await fetchPhoto(uid, t.uid)
@@ -157,7 +193,7 @@ export async function syncNow() {
     write(LS.lastPush, String(startedAt))
     write(LS.lastSync, String(Date.now()))
     console.info(`Synchro ok : ${spots.length} spot(s) et ${trips.length} sortie(s) envoyés, ${res.spots.length + res.trips.length} reçu(s)`)
-    set({ status: 'idle', last: Date.now() })
+    set(failed ? { status: 'error', error: `${failed} photo${failed > 1 ? 's' : ''} non envoyée${failed > 1 ? 's' : ''}, nouvel essai à la prochaine synchro`, last: Date.now() } : { status: 'idle', last: Date.now() })
   } catch (e) {
     console.warn('Synchro échouée :', e)
     set({ status: navigator.onLine ? 'error' : 'offline', error: e instanceof Error ? e.message : String(e) })

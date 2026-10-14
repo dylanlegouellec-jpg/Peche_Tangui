@@ -63,7 +63,7 @@ export function AccountCard() {
         <p className={st.status === 'error' ? 'warn' : 'muted'}>{label}</p>
         <div className="row">
           <button onClick={() => syncNow()} disabled={st.status === 'syncing'}>Synchroniser maintenant</button>
-          <button onClick={() => confirm('Se déconnecter ? Les données restent sur ce téléphone mais ne seront plus sauvegardées en ligne.') && logout()}>Déconnexion</button>
+          <button onClick={() => confirm('Se déconnecter ? Les données restent sur ce téléphone mais ne seront plus sauvegardées en ligne.') && void logout()}>Déconnexion</button>
         </div>
         <p className="muted small">Spots, sorties, photos et réglages sont sauvegardés en ligne et synchronisés entre tes appareils.</p>
         <div className="invite">

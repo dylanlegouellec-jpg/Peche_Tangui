@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const r = await db().query(
         `select p.data from photos p where p.uid = $1 and (p.user_id = $2 or (
            exists (select 1 from friendships f where f.status = 'accepted' and ((f.user_a = $2 and f.user_b = p.user_id) or (f.user_b = $2 and f.user_a = p.user_id)))
-           and (p.trip_uid = 'profile' or exists (select 1 from trips t where t.uid = p.trip_uid and not t.deleted and coalesce(t.data->>'private', 'false') <> 'true'))))`,
+           and (p.trip_uid = 'profile' or exists (select 1 from trips t where t.uid = p.trip_uid and t.user_id = p.user_id and not t.deleted and coalesce(t.data->>'private', 'false') <> 'true'))))`,
         [String(req.query.uid), userOf(req)],
       )
       if (!r.rowCount) return void res.status(404).json({ error: 'Photo introuvable' })

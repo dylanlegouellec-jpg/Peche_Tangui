@@ -55,11 +55,16 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
   const data = useMemo(() => (rawData ? { ...rawData, forecast: mergeCmems(rawData.forecast, cm) } : rawData), [rawData, cm])
 
   // `force` = true : on ignore le cache de 15 min (bouton ↻, retour sur l'appli après un long moment, toutes les 30 min).
+  const currentSpot = useRef(spot?.id)
+  currentSpot.current = spot?.id
   const refresh = useCallback(
     async (force: boolean) => {
       if (!spot) return
+      const id = spot.id
       setRefreshing(true)
       const d = await loadForecast(spot, force)
+      // Si on a changé de spot entre-temps, ces prévisions ne sont plus les bonnes : on les ignore.
+      if (currentSpot.current !== id) return
       setData((prev) => d ?? prev ?? null)
       setRefreshing(false)
     },
