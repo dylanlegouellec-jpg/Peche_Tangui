@@ -20,7 +20,7 @@ const km = (aLat: number, aLon: number, bLat: number, bLon: number) => {
 
 /**
  * GET ?lat=..&lon=.. : webcams publiques Windy proches d'un point (API Webcams v3, clé gratuite WINDY_WEBCAMS_KEY).
- *   &all=1        : liste élargie (jusqu'à 80 km, 40 webcams) pour choisir celles d'un spot
+ *   &all=1        : liste élargie (jusqu'à 80 km, 40 webcams) pour choisir celles d'un spot ; &wide=1 en plus : 250 km, 200 webcams
  *   &ids=1,2,3    : seulement ces webcams, dans cet ordre (choix fait par l'utilisateur)
  * Sans clé : { configured: false }. Les adresses d'images contiennent un jeton qui expire (~10 min) : le client ne doit pas les garder longtemps.
  */
@@ -34,7 +34,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ids = String(req.query.ids ?? '')
   if (ids && !/^\d{1,12}(,\d{1,12}){0,11}$/.test(ids)) return void res.status(400).json({ error: 'Liste de webcams invalide' })
   const all = req.query.all === '1'
-  const k = `${lat},${lon},${ids || (all ? 'all' : '')}`
+  const wide = all && req.query.wide === '1'
+  const k = `${lat},${lon},${ids || (all ? (wide ? 'wide' : 'all') : '')}`
   const hit = memo.get(k)
   if (hit && Date.now() - hit.at < 4 * 60e3) {
     res.setHeader('Cache-Control', 'public, s-maxage=240')
@@ -52,7 +53,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       list = (await Promise.all(ids.split(',').map((id) => one(id).catch(() => null)))).filter((w): w is WindyWebcam => !!w)
     }
-    const urls = ids ? [] : all ? [`${base}&nearby=${lat.toFixed(4)},${lon.toFixed(4)},80&limit=50`] : [30, 60].map((radius) => `${base}&nearby=${lat.toFixed(4)},${lon.toFixed(4)},${radius}&limit=10`)
+    if (all) {
+      // Liste pour choisir : 80 km (50 webcams), ou 250 km avec « wide » (4 pages de 50, les plus proches d'abord)
+      const radius = wide ? 250 : 80
+      const pages = await Promise.all((wide ? [0, 50, 100, 150] : [0]).map(async (offset) => {
+        const r = await fetch(`${base}&nearby=${lat.toFixed(4)},${lon.toFixed(4)},${radius}&limit=50&offset=${offset}`, { headers: { 'x-windy-api-key': key }, signal: AbortSignal.timeout(15000) })
+        if (!r.ok) throw new Error(`Windy HTTP ${r.status}`)
+        return ((await r.json()) as { webcams?: WindyWebcam[] }).webcams ?? []
+      }))
+      const seen = new Set<string>()
+      list = pages.flat().filter((w) => !seen.has(String(w.webcamId)) && seen.add(String(w.webcamId)))
+    }
+    const urls = ids || all ? [] : [30, 60].map((radius) => `${base}&nearby=${lat.toFixed(4)},${lon.toFixed(4)},${radius}&limit=10`)
     for (const url of urls) {
       const r = await fetch(url, { headers: { 'x-windy-api-key': key }, signal: AbortSignal.timeout(15000) })
       if (!r.ok) return void res.status(502).json({ configured: true, error: `Windy HTTP ${r.status}` })
@@ -74,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (ids) {
       const order = ids.split(',')
       webcams.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
-    } else webcams.sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999)).splice(all ? 40 : 6)
+    } else webcams.sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999)).splice(wide ? 200 : all ? 40 : 6)
     // Les jetons d'image expirent vite : cache court
     res.setHeader('Cache-Control', 'public, s-maxage=240')
     const body = { configured: true, webcams }

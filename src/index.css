@@ -334,3 +334,10 @@ button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 .pick-row.on { background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 8px; padding-left: 4px; }
 .sticky-actions { position: sticky; bottom: 0; background: var(--card); padding: 10px 0 4px; margin-top: 8px; }
 .sticky-actions button { flex: 1; }
+.pick-list { display: flex; flex-direction: column; gap: 4px; }
+.pick-list .pick-row { border-top: 0; border-radius: 10px; padding: 4px 6px 4px 0; transition: box-shadow .15s; }
+.pick-row.dragging { position: relative; z-index: 2; box-shadow: 0 8px 22px rgba(0, 0, 0, .3); background: var(--card); transition: none; }
+.grip { flex: none; width: 40px; height: 44px; padding: 0; border: 0; background: none; font-size: 1.3rem; color: var(--muted); cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; }
+.dragging .grip { cursor: grabbing; color: var(--accent); }
+.pick-n { flex: none; width: 18px; font-weight: 700; color: var(--muted); font-size: .85rem; text-align: center; }
+.pick-search { width: 100%; margin: 4px 0 6px; }
