@@ -15,7 +15,7 @@ const TABLES = ['spots', 'trips'] as const
  * et renvoie tout ce qui a changé côté serveur depuis `since`.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!guard(req, res, 'POST')) return
+  if (!(await guard(req, res, 'POST'))) return
   try {
     await ensureSchema()
     const user = userOf(req)

@@ -86,6 +86,7 @@ export async function exportBackup() {
   a.href = URL.createObjectURL(new Blob([JSON.stringify({ spots, trips: rows, settings: await loadSettings() }, null, 1)], { type: 'application/json' }))
   a.download = `peche-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
   a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 60_000)
 }
 
 const dataUrlToBlob = (url: string) => {

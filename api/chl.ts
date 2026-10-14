@@ -5,8 +5,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
  * Le serveur NOAA n'autorise pas les appels directs depuis un navigateur : on passe par cette petite passerelle.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const lat = Number(req.query.lat)
-  const lon = Number(req.query.lon)
+  // Arrondi à ~2 km : même résultat (moyenne sur ±6 km) et meilleur cache
+  const lat = Math.round(Number(req.query.lat) * 50) / 50
+  const lon = Math.round(Number(req.query.lon) * 50) / 50
   // Façades Manche-Atlantique seulement : évite d'en faire un relais ouvert
   if (!(lat > 42 && lat < 52 && lon > -7 && lon < 3)) return void res.status(400).json({ error: 'Position hors zone' })
   const d = 0.06

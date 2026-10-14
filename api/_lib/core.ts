@@ -45,6 +45,8 @@ end $$;`,
   // 3 : essais de connexion ratés (limite contre les attaques par essais répétés)
   `create table if not exists auth_failures (key text not null, at bigint not null);
 create index if not exists auth_failures_key on auth_failures (key, at);`,
+  // 4 : version des jetons de connexion (l'augmenter déconnecte tous les appareils du compte)
+  `alter table users add column if not exists token_version int not null default 0;`,
 ]
 
 /** Trop d'essais ratés récemment pour l'une de ces clés (adresse IP, e-mail) ? Fenêtre de 15 min. */
@@ -92,28 +94,40 @@ const secret = () => {
 }
 const b64 = (b: Buffer | string) => Buffer.from(b).toString('base64url')
 
-export function signToken(uid: number, days = 90) {
-  const body = b64(JSON.stringify({ exp: Date.now() + days * 864e5, uid }))
+export function signToken(uid: number, tv = 0, days = 90) {
+  const body = b64(JSON.stringify({ exp: Date.now() + days * 864e5, uid, tv }))
   return `${body}.${createHmac('sha256', secret()).update(body).digest('base64url')}`
 }
 
-/** Numéro du compte porté par le jeton, ou 0 si le jeton est absent, faux ou expiré (les anciens jetons sans numéro sont ceux du compte 1). */
-export function tokenUser(token: string | undefined): number {
-  if (!token) return 0
+/** Contenu d'un jeton valide (signature et date), ou null. Les anciens jetons sans numéro sont ceux du compte 1, version 0. */
+function tokenPayload(token: string | undefined): { uid: number; tv: number } | null {
+  if (!token) return null
   const [body, sig] = token.split('.')
-  if (!body || !sig) return 0
+  if (!body || !sig) return null
   const good = createHmac('sha256', secret()).update(body).digest()
   const given = Buffer.from(sig, 'base64url')
-  if (given.length !== good.length || !timingSafeEqual(given, good)) return 0
+  if (given.length !== good.length || !timingSafeEqual(given, good)) return null
   try {
-    const p = JSON.parse(Buffer.from(body, 'base64url').toString()) as { exp: number; uid?: number }
-    return p.exp > Date.now() ? p.uid ?? 1 : 0
+    const p = JSON.parse(Buffer.from(body, 'base64url').toString()) as { exp: number; uid?: number; tv?: number }
+    return p.exp > Date.now() ? { uid: p.uid ?? 1, tv: p.tv ?? 0 } : null
   } catch {
-    return 0
+    return null
   }
 }
 
-export const userOf = (req: VercelRequest) => tokenUser(req.headers.authorization?.replace(/^Bearer /, ''))
+const bearer = (req: VercelRequest) => req.headers.authorization?.replace(/^Bearer /, '')
+
+/** Numéro du compte du jeton (signature seule, sans vérifier la base) : à utiliser après `guard`, qui a déjà tout vérifié. */
+export const userOf = (req: VercelRequest) => tokenPayload(bearer(req))?.uid ?? 0
+
+/** Compte connecté, vérifié en base : le compte existe encore et le jeton n'a pas été révoqué. 0 sinon. */
+export async function authUser(req: VercelRequest): Promise<number> {
+  const p = tokenPayload(bearer(req))
+  if (!p) return 0
+  await ensureSchema()
+  const r = await db().query('select token_version from users where id = $1', [p.uid])
+  return r.rowCount && Number(r.rows[0].token_version) === p.tv ? p.uid : 0
+}
 
 export const hashCode = (code: string) => createHash('sha256').update(code).digest('hex')
 
@@ -130,12 +144,12 @@ export const checkPassword = (pw: string, stored: string) => {
 }
 
 /** Vérifie la méthode et le jeton ; renvoie false (et répond) si refusé. */
-export function guard(req: VercelRequest, res: VercelResponse, method: string, needAuth = true): boolean {
+export async function guard(req: VercelRequest, res: VercelResponse, method: string, needAuth = true): Promise<boolean> {
   if (req.method !== method) {
     res.status(405).json({ error: 'Méthode non autorisée' })
     return false
   }
-  if (needAuth && !userOf(req)) {
+  if (needAuth && !(await authUser(req))) {
     res.status(401).json({ error: 'Non connecté' })
     return false
   }

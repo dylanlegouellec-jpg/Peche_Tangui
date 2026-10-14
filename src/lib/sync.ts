@@ -88,6 +88,26 @@ export const createInvite = () => api<{ code: string; expiresAt: number }>('auth
 
 export const authToken = () => read(LS.token)
 
+/** Change le mot de passe ; les autres appareils sont déconnectés, celui-ci reste connecté. */
+export async function changePassword(current: string, next: string) {
+  const r = await api<{ token: string }>('auth', { action: 'password', password: current, newPassword: next })
+  write(LS.token, r.token)
+}
+
+/** Déconnecte tous les autres appareils (en cas de téléphone perdu ou de mot de passe partagé). */
+export async function revokeOtherDevices() {
+  const r = await api<{ token: string }>('auth', { action: 'revoke' })
+  write(LS.token, r.token)
+}
+
+/** Supprime définitivement le compte et tout ce qu'il contient sur le serveur. Les données de ce téléphone sont conservées. */
+export async function deleteAccount(password: string) {
+  await api('auth', { action: 'delete', password })
+  Object.values(LS).forEach((k) => write(k, null))
+  write(OWNER, null)
+  set({ loggedIn: false, email: null, status: 'idle', last: null, error: undefined })
+}
+
 export async function logout() {
   // Dernière synchro pour ne rien perdre (sans bloquer si le réseau manque)
   await syncNow().catch(() => undefined)

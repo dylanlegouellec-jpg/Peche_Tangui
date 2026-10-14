@@ -17,7 +17,7 @@ const AVATAR = `coalesce(s.data->'value'->>'avatarUid', s.data->>'avatarUid')`
  *  feed                    → dernières sorties de mes amis (hors sorties privées, sans les notes)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!guard(req, res, 'POST')) return
+  if (!(await guard(req, res, 'POST'))) return
   try {
     await ensureSchema()
     const me = userOf(req)

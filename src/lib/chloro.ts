@@ -28,7 +28,7 @@ export async function fetchChlorophyll(lat: number, lon: number): Promise<Chloro
   const hit = store[k]
   if (hit && Date.now() - hit.at < 6 * 3600e3) return hit.data
   try {
-    const r = await fetch(`/api/chl?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(25000) })
+    const r = await fetch(`/api/chl?lat=${(Math.round(lat * 50) / 50).toFixed(2)}&lon=${(Math.round(lon * 50) / 50).toFixed(2)}`, { signal: AbortSignal.timeout(25000) })
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     const j = (await r.json()) as { value: number | null; date?: string }
     const data = j.value != null && j.date ? { value: j.value, date: j.date, ageDays: Math.max(0, Math.round((Date.now() - Date.parse(j.date)) / 86400e3)) } : null

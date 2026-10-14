@@ -15,7 +15,7 @@ export async function fetchWebcams(lat: number, lon: number): Promise<Webcam[]> 
   const hit = cache.get(k)
   if (hit && Date.now() - hit.at < 4 * 60 * 1000) return hit.list
   try {
-    const r = await fetch(`/api/webcams?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(20000) })
+    const r = await fetch(`/api/webcams?lat=${(Math.round(lat * 50) / 50).toFixed(2)}&lon=${(Math.round(lon * 50) / 50).toFixed(2)}`, { signal: AbortSignal.timeout(20000) })
     if (!r.ok) return []
     const j = (await r.json()) as { configured?: boolean; webcams?: Webcam[] }
     const list = j.configured ? j.webcams ?? [] : []

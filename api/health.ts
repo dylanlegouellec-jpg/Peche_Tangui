@@ -3,7 +3,7 @@ import { db, ensureSchema, fail, guard } from './_lib/core.js'
 
 /** Diagnostic sans secret : la configuration est-elle complète ? */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!guard(req, res, 'GET', false)) return
+  if (!(await guard(req, res, 'GET', false))) return
   try {
     await ensureSchema()
     const u = await db().query('select 1 from users limit 1')

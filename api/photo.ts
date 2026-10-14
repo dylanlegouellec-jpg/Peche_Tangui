@@ -4,7 +4,7 @@ import { db, ensureSchema, fail, guard, userOf } from './_lib/core.js'
 /** POST { uid, tripUid, data (base64) } envoie une photo ; GET ?uid=... la renvoie. */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
-    if (!guard(req, res, 'GET')) return
+    if (!(await guard(req, res, 'GET'))) return
     try {
       await ensureSchema()
       // Mes photos, ou celles d'un ami (photo de profil, ou sortie non privée).
@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return fail(res, e)
     }
   }
-  if (!guard(req, res, 'POST')) return
+  if (!(await guard(req, res, 'POST'))) return
   try {
     await ensureSchema()
     const { uid, tripUid, data } = (req.body ?? {}) as { uid?: string; tripUid?: string; data?: string }

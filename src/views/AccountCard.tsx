@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from 'react'
-import { createInvite, getSyncState, login, logout, signup, subscribeSync, syncNow } from '../lib/sync'
+import { changePassword, createInvite, deleteAccount, getSyncState, login, logout, revokeOtherDevices, signup, subscribeSync, syncNow } from '../lib/sync'
 
 const params = new URLSearchParams(location.search)
 
@@ -13,6 +13,26 @@ export function AccountCard() {
   const [error, setError] = useState('')
   const [invite, setInvite] = useState<{ code: string; link: string; expiresAt: number } | null>(null)
   const [inviteMsg, setInviteMsg] = useState('')
+  const [manage, setManage] = useState<null | 'password' | 'delete'>(null)
+  const [cur, setCur] = useState('')
+  const [next, setNext] = useState('')
+  const [manageMsg, setManageMsg] = useState('')
+
+  async function runManage(fn: () => Promise<unknown>, ok: string) {
+    setManageMsg('')
+    setBusy(true)
+    try {
+      await fn()
+      setManageMsg(ok)
+      setCur('')
+      setNext('')
+      setManage(null)
+    } catch (err) {
+      setManageMsg(err instanceof TypeError ? 'Pas de connexion internet.' : err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const fail = (err: unknown) => setError(err instanceof TypeError ? 'Pas de connexion internet.' : err instanceof Error ? err.message : 'Erreur')
 
@@ -82,6 +102,29 @@ export function AccountCard() {
             <button onClick={makeInvite}>Créer un code d’invitation</button>
           )}
           {inviteMsg && <p className="muted small">{inviteMsg}</p>}
+        </div>
+        <div className="invite">
+          <strong>Sécurité du compte</strong>
+          <div className="row">
+            <button onClick={() => setManage(manage === 'password' ? null : 'password')}>Changer le mot de passe</button>
+            <button disabled={busy} onClick={() => confirm('Déconnecter tous tes autres appareils ? Ce téléphone reste connecté.') && runManage(revokeOtherDevices, 'Tous tes autres appareils sont déconnectés.')}>Déconnecter mes autres appareils</button>
+          </div>
+          {manage === 'password' && (
+            <form className="stack" onSubmit={(e) => { e.preventDefault(); void runManage(() => changePassword(cur, next), 'Mot de passe changé. Tes autres appareils devront se reconnecter.') }}>
+              <input type="password" placeholder="Mot de passe actuel" value={cur} onChange={(e) => setCur(e.target.value)} autoComplete="current-password" />
+              <input type="password" placeholder="Nouveau mot de passe (8 caractères min.)" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+              <button className="primary" disabled={busy || !cur || next.length < 8}>Enregistrer</button>
+            </form>
+          )}
+          <button className="danger-link" onClick={() => setManage(manage === 'delete' ? null : 'delete')}>Supprimer mon compte…</button>
+          {manage === 'delete' && (
+            <form className="stack" onSubmit={(e) => { e.preventDefault(); if (confirm('Supprimer définitivement ton compte ? Tes spots, sorties, photos et amis seront effacés du serveur. Cette action est irréversible.')) void runManage(() => deleteAccount(cur), 'Compte supprimé. Les données de ce téléphone sont conservées.') }}>
+              <p className="warn small">Efface définitivement du serveur tes spots, sorties, photos, réglages et amis. Les données restent sur ce téléphone ; pense à exporter une sauvegarde avant.</p>
+              <input type="password" placeholder="Ton mot de passe pour confirmer" value={cur} onChange={(e) => setCur(e.target.value)} autoComplete="current-password" />
+              <button className="danger" disabled={busy || !cur}>Supprimer définitivement</button>
+            </form>
+          )}
+          {manageMsg && <p className="muted small">{manageMsg}</p>}
         </div>
       </div>
     )

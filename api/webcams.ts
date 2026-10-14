@@ -9,6 +9,9 @@ interface WindyWebcam {
   urls?: { detail?: string }
 }
 
+/** Réponses récentes gardées en mémoire par le serveur (les jetons d'image Windy expirent en ~10 min). */
+const memo = new Map<string, { at: number; body: unknown }>()
+
 const km = (aLat: number, aLon: number, bLat: number, bLon: number) => {
   const r = Math.PI / 180
   const h = Math.sin(((bLat - aLat) * r) / 2) ** 2 + Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(((bLon - aLon) * r) / 2) ** 2
@@ -22,9 +25,16 @@ const km = (aLat: number, aLon: number, bLat: number, bLon: number) => {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const key = process.env.WINDY_WEBCAMS_KEY
   if (!key) return void res.json({ configured: false })
-  const lat = Number(req.query.lat)
-  const lon = Number(req.query.lon)
+  // Position arrondie à ~2 km : les webcams proches sont les mêmes, et on ménage le quota Windy
+  const lat = Math.round(Number(req.query.lat) * 50) / 50
+  const lon = Math.round(Number(req.query.lon) * 50) / 50
   if (!(lat > 42 && lat < 52 && lon > -7 && lon < 3)) return void res.status(400).json({ error: 'Position hors zone' })
+  const k = `${lat},${lon}`
+  const hit = memo.get(k)
+  if (hit && Date.now() - hit.at < 4 * 60e3) {
+    res.setHeader('Cache-Control', 'public, s-maxage=240')
+    return void res.json(hit.body)
+  }
   try {
     // Rayon de 30 km, puis 60 km si rien de proche (Windy limite le rayon à 250 km)
     let list: WindyWebcam[] = []
@@ -50,7 +60,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .slice(0, 6)
     // Les jetons d'image expirent vite : cache court
     res.setHeader('Cache-Control', 'public, s-maxage=240')
-    res.json({ configured: true, webcams })
+    const body = { configured: true, webcams }
+    memo.set(k, { at: Date.now(), body })
+    res.json(body)
   } catch {
     res.status(502).json({ configured: true, error: 'Webcams indisponibles' })
   }

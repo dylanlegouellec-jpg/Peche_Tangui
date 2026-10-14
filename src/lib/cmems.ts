@@ -23,7 +23,7 @@ export async function fetchCmems(lat: number, lon: number): Promise<Cmems | null
   const hit = cache.get(k)
   if (hit && Date.now() - hit.at < 30 * 60 * 1000) return hit.data
   try {
-    const r = await fetch(`/api/cmems?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(35000) })
+    const r = await fetch(`/api/cmems?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`, { signal: AbortSignal.timeout(35000) })
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     const data = (await r.json()) as Cmems
     console.info(`Copernicus IBI : courant ${data.phy ? `cellule à ${data.phy.cell.km} km` : 'indisponible'}, vagues ${data.wav ? `cellule à ${data.wav.cell.km} km` : 'indisponibles'}, transparence ${data.bgc ? 'ok' : 'indisponible'}`)

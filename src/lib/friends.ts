@@ -1,4 +1,4 @@
-import { api, authToken } from './sync'
+import { api, authToken, getSyncState, subscribeSync } from './sync'
 
 export interface Friend { id: number; name: string; avatarUid?: string | null }
 export interface Pending { id: number; name: string; email: string }
@@ -34,3 +34,10 @@ export function friendPhotoUrl(uid: string): Promise<string | null> {
   }
   return p
 }
+
+// À la déconnexion, on libère les photos d'amis gardées en mémoire (et elles ne doivent pas rester visibles pour un autre compte)
+subscribeSync(() => {
+  if (getSyncState().loggedIn || !urls.size) return
+  for (const p of urls.values()) void p.then((u) => u && URL.revokeObjectURL(u))
+  urls.clear()
+})

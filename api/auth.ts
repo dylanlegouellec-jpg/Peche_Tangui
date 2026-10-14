@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { randomBytes } from 'node:crypto'
-import { checkPassword, clientIp, db, ensureSchema, fail, guard, hashCode, hashPassword, recordFailure, signToken, tooManyFailures, userOf } from './_lib/core.js'
+import { authUser, checkPassword, clientIp, db, ensureSchema, fail, guard, hashCode, hashPassword, recordFailure, signToken, tooManyFailures } from './_lib/core.js'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -14,15 +14,55 @@ const bootCodes = () => (process.env.SETUP_CODE ?? '').split(',').map((c) => c.t
  * Création de compte sur invitation : { action: 'setup', email, password, code }
  * Invitation : { action: 'invite' } (connecté) → code à usage unique, valable 14 jours
  * Connexion : { action: 'login', email, password }
+ * Compte (connecté) : { action: 'password', password, newPassword } · { action: 'revoke' } (déconnecte les autres appareils) · { action: 'delete', password }
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!guard(req, res, 'POST', false)) return
+  if (!(await guard(req, res, 'POST', false))) return
   try {
     await ensureSchema()
-    const { action, password, code, email } = (req.body ?? {}) as { action?: string; password?: string; code?: string; email?: string }
+    const { action, password, code, email, newPassword } = (req.body ?? {}) as { action?: string; password?: string; code?: string; email?: string; newPassword?: string }
+
+    // Actions sur son propre compte
+    if (action === 'password' || action === 'revoke' || action === 'delete') {
+      const uid = await authUser(req)
+      if (!uid) return void res.status(401).json({ error: 'Non connecté' })
+      const key = [`uid:${uid}`]
+      if (await tooManyFailures(key, 8)) return void res.status(429).json({ error: 'Trop d’essais : réessaie dans 15 minutes' })
+      const me = (await db().query('select pass_hash, email, token_version from users where id = $1', [uid])).rows[0]
+      if (action !== 'revoke' && (typeof password !== 'string' || !checkPassword(password, me.pass_hash))) {
+        await recordFailure(key)
+        await sleep(800)
+        return void res.status(403).json({ error: 'Mot de passe actuel incorrect' })
+      }
+      if (action === 'delete') {
+        // Tout ce qui appartient au compte est effacé définitivement
+        const client = await db().connect()
+        try {
+          await client.query('begin')
+          for (const t of ['photos', 'trips', 'spots', 'app_settings']) await client.query(`delete from ${t} where user_id = $1`, [uid])
+          await client.query('delete from friendships where user_a = $1 or user_b = $1', [uid])
+          await client.query('delete from invites where created_by = $1 and used_by is null', [uid])
+          await client.query('delete from users where id = $1', [uid])
+          await client.query('commit')
+        } catch (e) {
+          await client.query('rollback')
+          throw e
+        } finally {
+          client.release()
+        }
+        return void res.json({ deleted: true })
+      }
+      if (action === 'password') {
+        if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 200) return void res.status(400).json({ error: 'Nouveau mot de passe : 8 caractères minimum' })
+        await db().query('update users set pass_hash = $2 where id = $1', [uid, hashPassword(newPassword)])
+      }
+      // Nouvelle version des jetons : tous les autres appareils sont déconnectés, celui-ci reçoit un nouveau jeton
+      const tv = Number((await db().query('update users set token_version = token_version + 1 where id = $1 returning token_version', [uid])).rows[0].token_version)
+      return void res.json({ token: signToken(uid, tv), email: me.email })
+    }
 
     if (action === 'invite') {
-      const uid = userOf(req)
+      const uid = await authUser(req)
       if (!uid) return void res.status(401).json({ error: 'Non connecté' })
       const now = Date.now()
       const open = await db().query('select count(*)::int as n from invites where created_by = $1 and used_by is null and expires_at > $2', [uid, now])
@@ -64,15 +104,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (action === 'login') {
-      // Compte trouvé par e-mail ; les comptes créés avant l'ajout de l'e-mail n'en ont pas : mot de passe seul.
-      const found = await db().query('select id, pass_hash, email from users where email = $1 or email is null order by email is null limit 1', [mail])
+      const found = await db().query('select id, pass_hash, email, token_version from users where email = $1', [mail])
       const row = found.rows[0]
       if (!row || !checkPassword(password, row.pass_hash)) {
         await recordFailure(keys)
         await sleep(800)
         return void res.status(401).json({ error: 'E-mail ou mot de passe incorrect' })
       }
-      return void res.json({ token: signToken(row.id), email: row.email ?? mail })
+      return void res.json({ token: signToken(row.id, Number(row.token_version)), email: row.email ?? mail })
     }
     res.status(400).json({ error: 'Action inconnue' })
   } catch (e) {
