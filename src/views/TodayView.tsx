@@ -5,7 +5,7 @@ import { LiveTide } from '../components/LiveTide'
 import { WebcamsCard } from '../components/WebcamsCard'
 import { depthAt, type Depth } from '../lib/bathy'
 import { buildHistory } from '../lib/insights'
-import { liveTrips } from '../lib/store'
+import { liveTrips, updateSpot } from '../lib/store'
 import { fetchChlorophyll, waterLook, type Chlorophyll } from '../lib/chloro'
 import { fetchCmems, mergeCmems, type Cmems } from '../lib/cmems'
 import { fetchVigilance, type VigilanceDay } from '../lib/vigilance'
@@ -223,7 +223,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
       {data === undefined && <p className="muted">Chargement des prévisions…</p>}
       {data === null && <p className="card warn">Impossible de charger les prévisions et aucune donnée en cache. Reconnecte-toi une fois pour les télécharger.</p>}
       {/* Sans prévisions, les webcams restent utiles pour voir l'état de la mer */}
-      {data === null && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} mine={spot.cams} />}
+      {data === null && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} mine={spot.cams} chosen={spot.windyCams} onChoose={(ids) => updateSpot(spot.id!, { windyCams: ids })} />}
 
       {data && (
         <>
@@ -399,7 +399,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
             ))}
           </div>
 
-          {isToday && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} mine={spot.cams} />}
+          {isToday && spot && <WebcamsCard lat={spot.lat} lon={spot.lon} mine={spot.cams} chosen={spot.windyCams} onChoose={(ids) => updateSpot(spot.id!, { windyCams: ids })} />}
           {isToday && spot && <LiveTide lat={spot.lat} lon={spot.lon} />}
 
           <div className="card">

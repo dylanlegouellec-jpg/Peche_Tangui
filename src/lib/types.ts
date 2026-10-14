@@ -15,6 +15,8 @@ export interface Spot {
   facing?: number
   /** Webcams ajoutées à la main pour ce spot (image en direct, live YouTube ou page web). */
   cams?: MyCam[]
+  /** Webcams Windy choisies pour ce spot, dans l'ordre d'affichage (identifiants). Absent = les plus proches automatiquement ; vide = aucune. */
+  windyCams?: string[]
   /** Simple marqueur personnel (coin à homard, bon coin…) : posé sur la carte, sans prévisions. */
   pin?: boolean
   example?: boolean

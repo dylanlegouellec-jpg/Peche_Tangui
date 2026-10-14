@@ -327,3 +327,10 @@ button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 .camlist .row { gap: 6px; align-items: center; } .camlist .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tab-badge { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--bad); color: #fff; font-size: .65rem; font-weight: 800; line-height: 17px; text-align: center; }
 @media (min-width: 1000px) and (hover: hover) and (pointer: fine) { .tabbar .tab-badge { left: 30px; top: 8px; } }
+.picker-sheet { max-height: 86dvh; }
+.pick-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.pick-row img, .pick-row .pick-ph { width: 64px; height: 36px; object-fit: cover; border-radius: 6px; flex: none; background: var(--bg); display: grid; place-items: center; }
+.pick-row .grow { flex: 1; min-width: 0; font-size: .88rem; line-height: 1.25; }
+.pick-row.on { background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 8px; padding-left: 4px; }
+.sticky-actions { position: sticky; bottom: 0; background: var(--card); padding: 10px 0 4px; margin-top: 8px; }
+.sticky-actions button { flex: 1; }
