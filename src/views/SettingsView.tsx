@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { Avatar } from '../components/Avatar'
 import { IconCloud, IconDownload, IconMonitor, IconMoon, IconPalette, IconShield, IconSliders, IconSun, IconTerminal } from '../components/icons'
 import { db } from '../lib/db'
-import { exportBackup, saveSettings } from '../lib/store'
+import { exportBackup, importBackup, saveSettings } from '../lib/store'
 import { TIDE_SOURCE } from '../lib/tides'
 import { getSyncState, subscribeSync } from '../lib/sync'
 import type { Mode, Settings, Spot, Theme, WindUnit } from '../lib/types'
@@ -84,6 +84,7 @@ const SOURCE_GROUPS: { title: string; items: Source[] }[] = [
 ]
 
 export function SettingsView({ settings, spots }: { settings: Settings; spots: Spot[] }) {
+  const [importMsg, setImportMsg] = useState('')
   const [page, setPage] = useState<Page | null>(null)
   const st = useSyncExternalStore(subscribeSync, getSyncState)
   const [opacity, setOpacity] = useState(settings.tabOpacity)
@@ -172,8 +173,13 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
             <p className="muted small">Une sauvegarde contient tes spots, sorties, photos et réglages dans un fichier à garder.</p>
             <div className="row">
               <button onClick={exportBackup}>Exporter une sauvegarde</button>
+              <label className="filebtn">
+                Restaurer une sauvegarde
+                <input type="file" accept="application/json,.json" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; setImportMsg('Restauration…'); try { const r = await importBackup(f); setImportMsg(`Restauré : ${r.spots} spot(s), ${r.trips} sortie(s), ${r.photos} photo(s). Rien n’a été effacé.`) } catch (err) { setImportMsg(err instanceof Error ? err.message : 'Restauration impossible') } }} />
+              </label>
               <button onClick={() => confirm('Effacer les prévisions en cache ? Elles seront retéléchargées.') && db.forecasts.clear()}>Vider le cache des prévisions</button>
             </div>
+            {importMsg && <p className="muted small">{importMsg}</p>}
           </div>
         )}
         {page === 'diagnostic' && <DiagnosticView />}

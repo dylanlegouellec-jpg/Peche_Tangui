@@ -44,6 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           [JSON.stringify(body.settings.data ?? {}), body.settings.updatedAt, now, user],
         )
       }
+      // Photos des sorties supprimées : on libère la place sur le serveur
+      const gone = (body.trips ?? []).filter((d) => d.deleted && typeof d.uid === 'string').map((d) => d.uid)
+      if (gone.length) await client.query('delete from photos where user_id = $1 and trip_uid = any($2)', [user, gone])
       await client.query('commit')
     } catch (e) {
       await client.query('rollback')

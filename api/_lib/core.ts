@@ -42,7 +42,22 @@ do $$ begin
   create unique index if not exists users_code_hash on users (code_hash) where code_hash is not null;
 exception when unique_violation then raise notice 'codes en double : index ignoré';
 end $$;`,
+  // 3 : essais de connexion ratés (limite contre les attaques par essais répétés)
+  `create table if not exists auth_failures (key text not null, at bigint not null);
+create index if not exists auth_failures_key on auth_failures (key, at);`,
 ]
+
+/** Trop d'essais ratés récemment pour l'une de ces clés (adresse IP, e-mail) ? Fenêtre de 15 min. */
+export async function tooManyFailures(keys: string[], max: number) {
+  const r = await db().query('select key, count(*)::int as n from auth_failures where key = any($1) and at > $2 group by key', [keys, Date.now() - 15 * 60e3])
+  return r.rows.some((x) => x.n >= max)
+}
+export async function recordFailure(keys: string[]) {
+  const now = Date.now()
+  await db().query('insert into auth_failures (key, at) select unnest($1::text[]), $2', [keys, now])
+  await db().query('delete from auth_failures where at < $1', [now - 24 * 3600e3])
+}
+export const clientIp = (req: VercelRequest) => String(req.headers['x-forwarded-for'] ?? 'inconnue').split(',')[0].trim()
 
 async function migrate() {
   const client = await db().connect()

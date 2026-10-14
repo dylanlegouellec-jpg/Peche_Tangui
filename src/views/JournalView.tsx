@@ -5,6 +5,7 @@ import { shrinkPhoto } from '../lib/photo'
 import { scoreSeries } from '../lib/scoring'
 import { addTrip, exportBackup, liveTrips, photoBlobs, removeTrip, setTripPrivate } from '../lib/store'
 import { FriendsView } from './FriendsView'
+import { useEditing } from '../lib/editing'
 import { SPECIES } from '../lib/species'
 import { StatsView } from './StatsView'
 import type { CatchItem, Mode, Settings, Spot, Trip } from '../lib/types'
@@ -130,6 +131,8 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
   const [notes, setNotes] = useState('')
   const [hidden, setHidden] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  useEditing()
 
   const patch = (i: number, p: Partial<CatchItem>) => setCatches((c) => c.map((x, j) => (j === i ? { ...x, ...p } : x)))
 
@@ -137,8 +140,10 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
     e.preventDefault()
     const spot = spots.find((s) => s.id === spotId)
     if (!spot) return
-    setBusy(true)
     const ts = new Date(date).getTime()
+    if (!date || Number.isNaN(ts)) return setError('Indique la date et l’heure de la sortie.')
+    setError('')
+    setBusy(true)
     let snapshot: Trip['snapshot']
     const res = await loadForecast(spot)
     if (res) {
@@ -150,7 +155,12 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
         snapshot = { airTemp: h.temp ?? null, wind: h.wind, wave: h.wave, seaTemp: h.seaTemp, pressure: h.pressure, score: sc?.score ?? null }
       }
     }
-    await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot, private: hidden })
+    try {
+      await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot, private: hidden })
+    } catch (err) {
+      setBusy(false)
+      return setError(`Enregistrement impossible : ${err instanceof Error && /quota/i.test(err.name + err.message) ? 'le téléphone n’a plus de place pour l’appli' : err instanceof Error ? err.message : 'erreur inconnue'}.`)
+    }
     onDone()
   }
 
@@ -176,10 +186,11 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
       <button type="button" onClick={() => setCatches([...catches, { species: '' }])}>+ Ajouter une prise</button>
       <label className="filebtn">
         📷 {photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''} · ajouter` : 'Ajouter des photos'}
-        <input type="file" accept="image/*" multiple hidden onChange={async (e) => { const files = [...(e.target.files ?? [])]; e.target.value = ''; const done = await Promise.all(files.map((f) => shrinkPhoto(f))); setPhotos((cur) => [...cur, ...done]) }} />
+        <input type="file" accept="image/*" multiple hidden onChange={async (e) => { const files = [...(e.target.files ?? [])]; e.target.value = ''; const done = await Promise.allSettled(files.map((f) => shrinkPhoto(f))); const ok = done.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])); if (ok.length < files.length) setError(`${files.length - ok.length} photo(s) illisible(s) : format non pris en charge par ce navigateur.`); setPhotos((cur) => [...cur, ...ok]) }} />
       </label>
       {photos.length > 0 && <Gallery blobs={photos} />}
       <textarea placeholder="Notes (appât, courant, comportement du poisson…)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      {error && <p className="warn small">{error}</p>}
       <label className="row small"><input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> 🔒 Sortie privée (cachée à mes amis)</label>
       <div className="row">
         <button type="button" onClick={onDone}>Annuler</button>

@@ -4,12 +4,30 @@ import { registerSW } from 'virtual:pwa-register'
 import App from './App'
 import './index.css'
 import { installDiagnostics } from './lib/diagnostics'
+import { whenNotEditing } from './lib/editing'
 
 installDiagnostics()
 
 // Mise à jour : l'appli cherche une nouvelle version au retour au premier plan et toutes les 30 min.
+// Quand elle est prête, la page est rechargée, mais jamais pendant une saisie (formulaire ouvert ou champ actif).
+const typing = () => document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement
+let reloading = false
+function reloadWhenSafe() {
+  if (reloading) return
+  whenNotEditing(() => {
+    if (typing()) return void document.addEventListener('focusout', reloadWhenSafe, { once: true })
+    reloading = true
+    try {
+      sessionStorage.setItem('peche-updated', '1')
+    } catch {
+      /* stockage indisponible */
+    }
+    location.reload()
+  })
+}
 registerSW({
   immediate: true,
+  onNeedReload: reloadWhenSafe,
   onRegisteredSW: (_url, reg) => {
     if (!reg) return
     const check = () => void reg.update().catch(() => undefined)
@@ -18,26 +36,8 @@ registerSW({
   },
 })
 
-// Quand une nouvelle version prend le relais, on recharge (sauf si tu es en train de saisir du texte).
-if ('serviceWorker' in navigator) {
-  const hadController = !!navigator.serviceWorker.controller
-  let reloading = false
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController || reloading) return
-    const typing = () => document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement
-    const reload = () => {
-      reloading = true
-      try {
-        sessionStorage.setItem('peche-updated', '1')
-      } catch {
-        /* stockage indisponible */
-      }
-      location.reload()
-    }
-    if (typing()) document.addEventListener('focusout', reload, { once: true })
-    else reload()
-  })
-}
+// Demande au navigateur de ne pas effacer les données de l'appli (Safari peut sinon les purger après 7 jours sans visite).
+void navigator.storage?.persist?.().catch(() => undefined)
 
 // Comportement « vraie appli » : pas de zoom, pas de menu contextuel, pas de pincement.
 // iOS ignore user-scalable=no, donc on bloque aussi les gestes à la main.

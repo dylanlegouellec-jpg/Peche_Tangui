@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { depthAt, describeDepth, detectFacing, type Depth } from '../lib/bathy'
+import { useEditing } from '../lib/editing'
 import { compass } from '../lib/exposure'
 import { PIN_KIND_CHOICES, SPOT_KINDS, SPOT_KIND_CHOICES, type Spot, type SpotKind } from '../lib/types'
 
@@ -32,6 +33,7 @@ export function SpotEditor({ spot, onSave, onClose }: { spot: SpotDraft | Spot; 
   const [error, setError] = useState('')
   const [accuracy, setAccuracy] = useState<number | undefined>((spot as SpotDraft).accuracy)
   const pin = !!(spot as SpotDraft).pin
+  useEditing()
 
   useEffect(() => {
     setDepth(undefined)

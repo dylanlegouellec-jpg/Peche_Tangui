@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { randomBytes } from 'node:crypto'
-import { checkPassword, db, ensureSchema, fail, guard, hashCode, hashPassword, signToken, userOf } from './_lib/core.js'
+import { checkPassword, clientIp, db, ensureSchema, fail, guard, hashCode, hashPassword, recordFailure, signToken, tooManyFailures, userOf } from './_lib/core.js'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -34,13 +34,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (typeof password !== 'string' || password.length < 8) return void res.status(400).json({ error: 'Mot de passe de 8 caractères minimum' })
-    const mail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+    if (password.length > 200) return void res.status(400).json({ error: 'Mot de passe trop long' })
+    const mail = typeof email === 'string' ? email.trim().toLowerCase().slice(0, 200) : ''
+    // Limite d'essais : 20 échecs par connexion et 8 par compte, sur 15 minutes
+    const keys = [`ip:${clientIp(req)}`, `mail:${mail}`]
+    if (await tooManyFailures([keys[0]], 20) || (await tooManyFailures([keys[1]], 8))) return void res.status(429).json({ error: 'Trop d’essais : réessaie dans 15 minutes' })
 
     if (action === 'setup') {
       if (!EMAIL.test(mail)) return void res.status(400).json({ error: 'Adresse e-mail invalide' })
       const given = code?.trim() ?? ''
       const invite = given ? await db().query('select created_by from invites where code_hash = $1 and used_by is null and expires_at > $2', [hashCode(given), Date.now()]) : null
       if (!given || (!invite?.rowCount && !bootCodes().includes(given))) {
+        await recordFailure([keys[0]])
         await sleep(800)
         return void res.status(403).json({ error: 'Code d’invitation incorrect ou expiré' })
       }
@@ -63,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const found = await db().query('select id, pass_hash, email from users where email = $1 or email is null order by email is null limit 1', [mail])
       const row = found.rows[0]
       if (!row || !checkPassword(password, row.pass_hash)) {
+        await recordFailure(keys)
         await sleep(800)
         return void res.status(401).json({ error: 'E-mail ou mot de passe incorrect' })
       }
