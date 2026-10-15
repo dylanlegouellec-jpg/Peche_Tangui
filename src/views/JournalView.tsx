@@ -5,6 +5,8 @@ import { shrinkPhoto } from '../lib/photo'
 import { scoreSeries } from '../lib/scoring'
 import { addTrip, exportBackup, liveTrips, photoBlobs, removeTrip, setTripPrivate } from '../lib/store'
 import { FriendsView } from './FriendsView'
+import { celebrate } from '../components/fx/Celebrate'
+import { openPhoto } from '../components/fx/Lightbox'
 import { useEditing } from '../lib/editing'
 import { SPECIES } from '../lib/species'
 import { StatsView } from './StatsView'
@@ -29,7 +31,7 @@ function Gallery({ blobs }: { blobs: Blob[] }) {
   return (
     <div className="photos">
       {urls.map((u) => (
-        <img key={u} src={u} alt="Prise" />
+        <img key={u} src={u} alt="Prise" onClick={(e) => openPhoto(e.currentTarget)} />
       ))}
     </div>
   )
@@ -155,12 +157,18 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
         snapshot = { airTemp: h.temp ?? null, wind: h.wind, wave: h.wave, seaTemp: h.seaTemp, pressure: h.pressure, score: sc?.score ?? null }
       }
     }
+    // Record : plus grande taille jamais notée pour cette espèce
+    const kept = catches.filter((c) => c.species)
+    const previous = await liveTrips()
+    const record = kept.find((c) => c.sizeCm && previous.every((t) => t.catches.every((o) => o.species.trim().toLowerCase() !== c.species.trim().toLowerCase() || (o.sizeCm ?? 0) < c.sizeCm!)) && previous.some((t) => t.catches.some((o) => o.species.trim().toLowerCase() === c.species.trim().toLowerCase())))
     try {
-      await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: catches.filter((c) => c.species), photos, snapshot, private: hidden })
+      await addTrip({ date: ts, spot, mode, notes: notes.trim() || undefined, catches: kept, photos, snapshot, private: hidden })
     } catch (err) {
       setBusy(false)
       return setError(`Enregistrement impossible : ${err instanceof Error && /quota/i.test(err.name + err.message) ? 'le téléphone n’a plus de place pour l’appli' : err instanceof Error ? err.message : 'erreur inconnue'}.`)
     }
+    if (record) celebrate('record', `Record : ${record.species} de ${record.sizeCm} cm !`)
+    else if (kept.length) celebrate('catch', kept.length > 1 ? `${kept.length} prises enregistrées` : `${kept[0].species} enregistré${kept[0].species.endsWith('e') ? 'e' : ''} !`)
     onDone()
   }
 

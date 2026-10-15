@@ -1,5 +1,5 @@
 import { liveQuery } from 'dexie'
-import type { Circle, CircleMarker, Map as LeafletMap, LayerGroup, TileLayer } from 'leaflet'
+import type { Circle, Map as LeafletMap, LayerGroup, Marker, TileLayer } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef, useState } from 'react'
 import { DEPTH_STOPS, WMS_URL, depthAt, depthSld, describeDepth } from '../lib/bathy'
@@ -50,7 +50,7 @@ export function SpotsMap({ spots, onOpen, onAdd, onMark, onEdit }: Props) {
   const handlers = useRef({ onOpen, onAdd, onMark, onEdit })
   handlers.current = { onOpen, onAdd, onMark, onEdit }
   const watchId = useRef<number | undefined>(undefined)
-  const dot = useRef<CircleMarker | undefined>(undefined)
+  const dot = useRef<Marker | undefined>(undefined)
   const halo = useRef<Circle | undefined>(undefined)
   const lastFix = useRef<GeolocationPosition | undefined>(undefined)
   const [tracking, setTracking] = useState(false)
@@ -109,6 +109,11 @@ export function SpotsMap({ spots, onOpen, onAdd, onMark, onEdit }: Props) {
     if (relief) {
       bathy.current.addTo(map.current)
       bathy.current.setZIndex(5)
+      // Balayage façon sonar quand on active le relief
+      const box = el.current
+      box?.classList.remove('relief-scan')
+      void box?.offsetWidth
+      box?.classList.add('relief-scan')
     } else bathy.current.remove()
   }, [ready, relief])
 
@@ -122,10 +127,12 @@ export function SpotsMap({ spots, onOpen, onAdd, onMark, onEdit }: Props) {
       layer.current.clearLayers()
       const sum = summarize(trips)
       const bounds: [number, number][] = []
+      let n = 0
       for (const s of spots) {
         const x = sum.get(s.uid)
+        const delay = `style="--d:${Math.min(n++, 12) * 55}ms"`
         const kind = x && x.catches ? 'good' : x ? 'mid' : 'none'
-        const icon = L.divIcon({ className: '', html: s.pin ? `<div class="pin mark"><span>${kindEmoji(s.kind)}</span></div>` : `<div class="pin ${kind}"><span>${x?.catches ?? ''}</span></div>`, iconSize: [34, 42], iconAnchor: [17, 40], popupAnchor: [0, -38] })
+        const icon = L.divIcon({ className: '', html: s.pin ? `<div class="pin mark" ${delay}><span>${kindEmoji(s.kind)}</span></div>` : `<div class="pin ${kind}" ${delay}><span>${x?.catches ?? ''}</span></div>`, iconSize: [34, 42], iconAnchor: [17, 40], popupAnchor: [0, -38] })
         const marker = L.marker([s.lat, s.lon], { icon }).addTo(layer.current)
         const box = document.createElement('div')
         box.className = 'pop'
@@ -173,7 +180,8 @@ export function SpotsMap({ spots, onOpen, onAdd, onMark, onEdit }: Props) {
     setAccuracy(Math.round(p.coords.accuracy))
     if (!dot.current) {
       halo.current = L.circle(ll, { radius: p.coords.accuracy, color: '#2f9bd8', weight: 1, fillOpacity: 0.12, interactive: false }).addTo(m)
-      dot.current = L.circleMarker(ll, { radius: 8, color: '#fff', weight: 3, fillColor: '#2f7de1', fillOpacity: 1, interactive: false }).addTo(m)
+      // Point bleu avec ondes « sonar »
+      dot.current = L.marker(ll, { interactive: false, keyboard: false, icon: L.divIcon({ className: '', html: '<div class="sonar"><i></i><i></i><i></i><b></b></div>', iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(m)
     } else {
       halo.current?.setLatLng(ll).setRadius(p.coords.accuracy)
       dot.current.setLatLng(ll)

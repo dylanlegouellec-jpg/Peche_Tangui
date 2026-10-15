@@ -5,10 +5,22 @@ import { db } from '../lib/db'
 import { exportBackup, importBackup, saveSettings } from '../lib/store'
 import { TIDE_SOURCE } from '../lib/tides'
 import { getSyncState, subscribeSync } from '../lib/sync'
-import type { Mode, Settings, Spot, Theme, WindUnit } from '../lib/types'
+import { DEFAULT_FX, type Fx, type Look, type Mode, type Motion, type Settings, type Spot, type Theme, type WindUnit } from '../lib/types'
 import { AccountCard } from './AccountCard'
 import { DiagnosticView } from './DiagnosticView'
 import { ProfileCard } from './ProfileCard'
+
+const LOOKS: { id: Look; name: string; desc: string }[] = [
+  { id: 'ocean', name: 'Océan vivant', desc: 'La mer du spot en fond, au rythme de la houle et du vent' },
+  { id: 'glass', name: 'Verre liquide', desc: 'Surfaces en verre dépoli, reflets et couleurs qui glissent' },
+  { id: 'logbook', name: 'Carnet de bord', desc: 'Carte marine, papier, encre et rose des vents' },
+]
+const FX_LIST: [keyof Fx, string, string][] = [
+  ['background', 'Fond animé', 'mer, verre ou carte'],
+  ['touch', 'Effets au toucher', 'bioluminescence, ondes, encre'],
+  ['celebrate', 'Célébrations', 'poisson qui saute, record'],
+  ['splash', 'Écran de démarrage', 'hameçon dans l’eau'],
+]
 
 type Page = 'profile' | 'appearance' | 'fishing' | 'account' | 'data' | 'about' | 'diagnostic'
 
@@ -117,6 +129,37 @@ export function SettingsView({ settings, spots }: { settings: Settings; spots: S
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <strong>Style</strong>
+              <div className="looks" role="radiogroup" aria-label="Style visuel">
+                {LOOKS.map((l) => (
+                  <button key={l.id} role="radio" aria-checked={(settings.look ?? 'ocean') === l.id} className={`look-card ${(settings.look ?? 'ocean') === l.id ? 'on' : ''}`} onClick={() => saveSettings({ look: l.id })}>
+                    <span className={`look-prev ${l.id}`} aria-hidden="true"><i /><i /><i /></span>
+                    <strong>{l.name}</strong>
+                    <span className="muted small">{l.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="row between">
+                <strong>Animations</strong>
+                <Seg<Motion> value={settings.motion ?? 'full'} options={[['full', 'Complètes'], ['light', 'Légères'], ['off', 'Aucune']]} onChange={(motion) => saveSettings({ motion })} />
+              </div>
+              <p className="muted small">Légères : seulement les transitions, sans fond animé ni effets (économise la batterie). Si « Réduire les animations » est activé sur l’iPhone, l’appli n’anime rien.</p>
+            </div>
+            <div className={(settings.motion ?? 'full') !== 'full' ? 'dim' : ''}>
+              <strong>Effets</strong>
+              {FX_LIST.map(([k, label, hint]) => (
+                <label key={k} className="switch-row">
+                  <span>
+                    {label}
+                    <span className="muted small"> · {hint}</span>
+                  </span>
+                  <input type="checkbox" className="switch" checked={{ ...DEFAULT_FX, ...settings.fx }[k]} onChange={(e) => saveSettings({ fx: { ...DEFAULT_FX, ...settings.fx, [k]: e.target.checked } })} />
+                </label>
+              ))}
             </div>
             <div>
               <div className="row between">

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 export type Tab = 'today' | 'species' | 'journal' | 'spots' | 'settings'
 
@@ -18,8 +18,18 @@ const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
 
 export function TabBar({ tab, onChange, badges = {} }: { tab: Tab; onChange: (t: Tab) => void; badges?: Partial<Record<Tab, number>> }) {
   const index = TABS.findIndex((t) => t.id === tab)
+  // La pastille s'étire comme une goutte pendant qu'elle glisse d'un onglet à l'autre
+  const [moving, setMoving] = useState(false)
+  const prev = useRef(index)
+  useEffect(() => {
+    if (prev.current === index) return
+    prev.current = index
+    setMoving(true)
+    const t = setTimeout(() => setMoving(false), 520)
+    return () => clearTimeout(t)
+  }, [index])
   return (
-    <nav className="tabbar" aria-label="Navigation" style={{ ['--n' as string]: TABS.length, ['--i' as string]: index }}>
+    <nav className={`tabbar ${moving ? 'moving' : ''}`} aria-label="Navigation" style={{ ['--n' as string]: TABS.length, ['--i' as string]: index }}>
       <div className="pill" aria-hidden="true" />
       {TABS.map((t) => (
         <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => onChange(t.id)} aria-current={tab === t.id ? 'page' : undefined}>

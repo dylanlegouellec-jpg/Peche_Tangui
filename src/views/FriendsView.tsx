@@ -1,10 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { friendFeed, friendPhotoUrl, listFriends, removeFriend, requestFriend, respondFriend, type Friend, type FriendTrip, type Pending } from '../lib/friends'
 import { getSyncState, subscribeSync } from '../lib/sync'
+import { openPhoto } from '../components/fx/Lightbox'
 
 const fmt = (ms: number) => new Date(ms).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
 
-function Pic({ uid, className, alt }: { uid?: string | null; className?: string; alt: string }) {
+function Pic({ uid, className, alt, zoom }: { uid?: string | null; className?: string; alt: string; zoom?: boolean }) {
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
     let alive = true
@@ -14,12 +15,12 @@ function Pic({ uid, className, alt }: { uid?: string | null; className?: string;
       alive = false
     }
   }, [uid])
-  return url ? <img src={url} alt={alt} className={className} /> : null
+  return url ? <img src={url} alt={alt} className={className} onClick={zoom ? (e) => openPhoto(e.currentTarget) : undefined} /> : null
 }
 
-function Face({ name, uid }: { name: string; uid?: string | null }) {
+function Face({ name, uid, fresh }: { name: string; uid?: string | null; fresh?: boolean }) {
   return (
-    <span className="avatar" style={{ width: 36, height: 36, fontSize: 15 }}>
+    <span className={`avatar ${fresh ? 'fresh' : ''}`} style={{ width: 36, height: 36, fontSize: 15 }}>
       {uid ? <Pic uid={uid} alt={name} /> : null}
       <span className="ini">{name.slice(0, 1).toUpperCase()}</span>
     </span>
@@ -36,6 +37,21 @@ export function FriendsView({ onCount }: { onCount?: (n: number) => void }) {
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
   const [manage, setManage] = useState(false)
+  // Sorties d'amis nouvelles depuis ta dernière visite : anneau coloré autour de l'avatar
+  const [seenAt] = useState(() => {
+    try {
+      return Number(localStorage.getItem('peche-friends-seen')) || Date.now()
+    } catch {
+      return Date.now()
+    }
+  })
+  useEffect(() => () => {
+    try {
+      localStorage.setItem('peche-friends-seen', String(Date.now()))
+    } catch {
+      /* stockage indisponible */
+    }
+  }, [])
 
   async function load() {
     try {
@@ -123,14 +139,14 @@ export function FriendsView({ onCount }: { onCount?: (n: number) => void }) {
         {feed?.map((t) => (
           <div className="card" key={t.uid}>
             <div className="row friendhead">
-              <Face name={t.name} uid={t.avatarUid} />
+              <Face name={t.name} uid={t.avatarUid} fresh={t.date > seenAt} />
               <div>
                 <strong>{t.name}</strong>
                 <div className="muted small">{t.spotName} · {t.mode === 'bord' ? 'du bord' : 'sous-marine'} · {fmt(t.date)}</div>
               </div>
             </div>
             <div>{t.catches.length ? t.catches.map((c) => c.species + (c.sizeCm ? ` ${c.sizeCm} cm` : '')).join(', ') : 'Bredouille'}</div>
-            <div className="photos">{t.photoUids.slice(0, 3).map((u) => <Pic key={u} uid={u} alt="Prise" />)}</div>
+            <div className="photos">{t.photoUids.slice(0, 3).map((u) => <Pic key={u} uid={u} alt="Prise" zoom />)}</div>
             {t.snapshot && <p className="muted small">Conditions : vent {t.snapshot.wind != null ? `${Math.round(t.snapshot.wind)} km/h` : '?'} · houle {t.snapshot.wave?.toFixed(1) ?? '?'} m · eau {t.snapshot.seaTemp?.toFixed(1) ?? '?'} °C</p>}
           </div>
         ))}

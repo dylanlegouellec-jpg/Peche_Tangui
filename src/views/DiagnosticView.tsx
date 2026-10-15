@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
+import { CHANGELOG } from '../data/changelog'
 import { db } from '../lib/db'
 import { clearLogs, getLogs, logVersion, subscribeLogs, type Level } from '../lib/diagnostics'
 import { getSyncDebug, getSyncState, subscribeSync } from '../lib/sync'
@@ -55,6 +56,7 @@ export function DiagnosticView() {
   const [filter, setFilter] = useState<Level | 'all'>('all')
   const [swState, setSwState] = useState('…')
   const [msg, setMsg] = useState('')
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     readStorage().then(setStorage)
@@ -172,6 +174,19 @@ export function DiagnosticView() {
 
   return (
     <div className="diag">
+      <div className="card changelog">
+        <h3>Nouveautés</h3>
+        {CHANGELOG.map((r, i) => (
+          <details key={r.date} open={i === 0 || showAll}>
+            <summary>
+              <strong>{r.title}</strong>
+              <span className="muted small">{new Date(`${r.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}{i === 0 ? ' · dernière version' : ''}</span>
+            </summary>
+            <ul>{r.items.map((it) => <li key={it}>{it}</li>)}</ul>
+          </details>
+        ))}
+        <button className="mini" onClick={() => setShowAll((v) => !v)}>{showAll ? 'Tout replier' : 'Tout déplier'}</button>
+      </div>
       <div className="card">
         <h3>Application</h3>
         <Rows rows={app} />

@@ -1,12 +1,20 @@
 import { liveQuery } from 'dexie'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Avatar } from './components/Avatar'
 import { TabBar, type Tab } from './components/TabBar'
+import { Backdrop } from './components/fx/Backdrop'
+import { Celebrations } from './components/fx/Celebrate'
+import { Lightbox } from './components/fx/Lightbox'
+import { PullRefresh } from './components/fx/PullRefresh'
+import { Splash } from './components/fx/Splash'
+import { TouchFx } from './components/fx/TouchFx'
+import { CHANGELOG } from './data/changelog'
+import { LookContext, useReducedMotion, useSystemDark, type LookState } from './lib/look'
 import { loadSettings, seedSpots } from './lib/db'
 import { liveSpots } from './lib/store'
 import { getSyncState, startAutoSync, subscribeSync } from './lib/sync'
 import { listFriends } from './lib/friends'
-import { DEFAULT_SETTINGS, type Mode, type Settings, type Spot } from './lib/types'
+import { DEFAULT_FX, DEFAULT_SETTINGS, type Mode, type Settings, type Spot } from './lib/types'
 import { JournalView } from './views/JournalView'
 import { SettingsView } from './views/SettingsView'
 import { SpeciesView } from './views/SpeciesView'
@@ -21,7 +29,7 @@ export default function App() {
     try {
       if (sessionStorage.getItem('peche-updated')) {
         sessionStorage.removeItem('peche-updated')
-        return `Appli mise à jour (version ${__COMMIT__})`
+        return `Nouvelle version : ${CHANGELOG[0]?.title ?? __COMMIT__} · détails dans Réglages → Diagnostic`
       }
     } catch {
       /* stockage indisponible */
@@ -69,6 +77,24 @@ export default function App() {
     document.documentElement.style.setProperty('--tab-alpha', `${settings.tabOpacity}%`)
   }, [settings.tabOpacity])
 
+  // Style visuel et niveau d'animation (le réglage « Réduire les animations » du téléphone coupe tout)
+  const reduce = useReducedMotion()
+  const systemDark = useSystemDark()
+  const look: LookState = useMemo(
+    () => ({
+      look: settings.look ?? 'ocean',
+      motion: reduce ? 'off' : (settings.motion ?? 'full'),
+      fx: { ...DEFAULT_FX, ...settings.fx },
+      dark: settings.theme === 'dark' || (settings.theme === 'auto' && systemDark),
+    }),
+    [settings.look, settings.motion, settings.fx, settings.theme, reduce, systemDark],
+  )
+  useEffect(() => {
+    const root = document.documentElement
+    root.setAttribute('data-look', look.look)
+    root.setAttribute('data-motion', look.motion)
+  }, [look.look, look.motion])
+
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 4000)
@@ -88,6 +114,8 @@ export default function App() {
   const currentSpot = spotId ?? places.find((s) => s.uid === settings.defaultSpotUid)?.id
 
   return (
+    <LookContext.Provider value={look}>
+    <Backdrop />
     <div className="shell">
       <header>
         <h1>Pêche</h1>
@@ -97,8 +125,9 @@ export default function App() {
         </button>
       </header>
       <main className="scroll" ref={scrollRef}>
+        <PullRefresh scroller={scrollRef} enabled={tab === 'today'} onRefresh={() => window.dispatchEvent(new Event('peche-refresh'))} />
         <div className="app">
-          <div className={`page ${dir}`} key={tab}>
+          <div className={`page page-${dir}`} key={tab}>
         {tab === 'settings' ? (
           <SettingsView settings={settings} spots={places} />
         ) : tab === 'spots' ? (
@@ -118,5 +147,10 @@ export default function App() {
       <TabBar tab={tab} onChange={changeTab} badges={{ journal: requests }} />
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
+    <Splash />
+    <TouchFx />
+    <Celebrations />
+    <Lightbox />
+    </LookContext.Provider>
   )
 }

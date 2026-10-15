@@ -13,7 +13,11 @@ import { compass, swellFactor, windKind, WIND_LABEL } from '../lib/exposure'
 import { BestSpots } from '../components/BestSpots'
 import { PlanCard } from '../components/PlanCard'
 import { FRESH_MS, findTides, loadForecast, peekForecast, type Loaded } from '../lib/forecast'
-import { moonLabel } from '../lib/moon'
+import { moonLabel, moonPhase } from '../lib/moon'
+import { setAmbience } from '../lib/ambience'
+import { Compass } from '../components/fx/Compass'
+import { MoonIcon } from '../components/fx/MoonIcon'
+import { ScoreGauge } from '../components/fx/ScoreGauge'
 import { coefficientAt, nearestStation, predictTides } from '../lib/tides'
 import { noonOf } from '../lib/astro'
 import { bestWindows, dayKey, dayLabel, fmtWind, scoreSeries } from '../lib/scoring'
@@ -89,6 +93,13 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
       document.removeEventListener('visibilitychange', onVisible)
       clearInterval(timer)
     }
+  }, [refresh])
+
+  // « Tirer pour actualiser »
+  useEffect(() => {
+    const on = () => void refresh(true)
+    window.addEventListener('peche-refresh', on)
+    return () => window.removeEventListener('peche-refresh', on)
   }, [refresh])
 
   useEffect(() => {
@@ -171,6 +182,22 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
   const daysAhead = (key: string) => Math.round((noonOf(key) - noonOf(todayKey)) / 86400)
   const hourAt = useMemo(() => new Map((data?.forecast.hours ?? []).map((h) => [h.ts, h])), [data])
   const point = focus ? hourAt.get(focus.ts) : undefined
+  // Le fond animé reprend les conditions de l'heure affichée
+  const sunOfDay = data?.forecast.sun.find((x) => dayKey(x.sunrise) === (point ? dayKey(point.ts) : todayKey))
+  useEffect(() => {
+    if (!point) return
+    const near = (a?: number) => a != null && Math.abs(point.ts - a) <= 3600
+    setAmbience({
+      wave: point.wave ?? 0.5,
+      waveDir: point.waveDir ?? null,
+      period: point.wavePeriod ?? null,
+      wind: point.wind ?? 0,
+      windDir: point.windDir ?? null,
+      rain: point.precip ?? 0,
+      cloud: point.cloud ?? 30,
+      phase: near(sunOfDay?.sunrise) ? 'dawn' : near(sunOfDay?.sunset) ? 'dusk' : point.isDay ? 'day' : 'night',
+    })
+  }, [point, sunOfDay?.sunrise, sunOfDay?.sunset])
   const dayTemps = dayHours.map((s) => hourAt.get(s.ts)?.temp).filter((t): t is number => t != null)
   const rain24 = (data?.forecast.hours ?? []).filter((h) => focus && h.ts > focus.ts - 86400 && h.ts <= focus.ts).reduce((n, h) => n + (h.precip ?? 0), 0)
   const dayTides = tides.filter((t) => dayKey(t.ts) === activeDay)
@@ -263,8 +290,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
             </p>
           )}
 
-          <div className={`card score ${tone(focus.score)}`}>
-            <div className="big">{focus.score}</div>
+          <div className={`card score ${tone(focus.score)}`} key={activeDay}>
+            <ScoreGauge value={focus.score} tone={tone(focus.score)} />
             <div>
               <strong>{focus.ts === nowHour?.ts ? 'Maintenant' : `${dayShort(focus.ts)} ${hhmm(focus.ts)}`}</strong>
               <div className="muted">{focus.score >= 70 ? 'Conditions très favorables' : focus.score >= 45 ? 'Conditions correctes' : 'Conditions peu favorables'}</div>
@@ -295,6 +322,9 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
                   <span className="muted small">mm/h · {Math.round(rain24)} mm/24 h</span>
                 </div>
               </div>
+              {(point.windDir != null || point.waveDir != null) && (
+                <Compass windDir={point.windDir} wind={point.wind} waveDir={point.waveDir} wave={point.wave} facing={spot?.facing} label={`Vent ${point.wind != null ? fmtWind(point.wind, windUnit) : ''} ${point.windDir != null ? `de ${compass(point.windDir)}` : ''}, houle ${point.waveDir != null ? `de ${compass(point.waveDir)}` : ''}`} />
+              )}
               {point && (
                 <div className="conds">
                   {point.wind != null && (
@@ -419,7 +449,7 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
               <div className="kv"><span className="muted">Coefficient</span><span>{dayTides.filter((t) => t.type === 'haute').map((t) => coefficientAt(t.ts)).join(' · ')}</span></div>
             )}
             <p className="muted small">
-              {moonLabel(focus.ts)}. {stationInfo && stationInfo.distance < 120 ? `Horaires et hauteurs calculés d’après la jauge de ${stationInfo.station.name} (${Math.round(stationInfo.distance)} km) : sur ton spot ils peuvent différer, surtout en rivière ou derrière une barre. ` : ''}Coefficient calculé d’après les marées de Brest, à 2-3 points près de la valeur officielle du SHOM.
+              <MoonIcon phase={moonPhase(focus.ts)} size={18} /> {moonLabel(focus.ts)}. {stationInfo && stationInfo.distance < 120 ? `Horaires et hauteurs calculés d’après la jauge de ${stationInfo.station.name} (${Math.round(stationInfo.distance)} km) : sur ton spot ils peuvent différer, surtout en rivière ou derrière une barre. ` : ''}Coefficient calculé d’après les marées de Brest, à 2-3 points près de la valeur officielle du SHOM.
             </p>
           </div>
             </div>

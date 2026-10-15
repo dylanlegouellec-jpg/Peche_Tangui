@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
+import { useLook } from '../lib/look'
 import { fetchObservations, type Observation } from '../lib/refmar'
 import { nearestLiveStation, predictCurve, predictTides } from '../lib/tides'
 
@@ -9,6 +10,8 @@ export function LiveTide({ lat, lon }: { lat: number; lon: number }) {
   const live = useMemo(() => nearestLiveStation(lat, lon), [lat, lon])
   const [obs, setObs] = useState<Observation[] | null | undefined>(undefined)
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000))
+  const { motion } = useLook()
+  const clip = useId().replace(/:/g, '')
 
   useEffect(() => {
     if (!live?.station.refmar) return
@@ -70,6 +73,7 @@ export function LiveTide({ lat, lon }: { lat: number; lon: number }) {
         </div>
         <div className="live-trend">{Math.abs(slope) < 0.02 ? '→ étale' : slope > 0 ? '↗ monte' : '↘ descend'}</div>
       </div>
+      <PortScene level={last.level} lo={lo} hi={hi} trend={slope} />
       <div className="kv">
         <span className="muted">Écart avec la prédiction</span>
         <span className={Math.abs(gap) >= 0.3 ? 'warn' : ''}>
@@ -78,9 +82,18 @@ export function LiveTide({ lat, lon }: { lat: number; lon: number }) {
         </span>
       </div>
       <svg viewBox={`0 0 ${W} ${H + 10}`} className="tide-chart" role="img" aria-label="Niveau d’eau mesuré et prédit sur 24 heures">
+        {/* Les courbes se dessinent de gauche à droite à l'ouverture */}
+        <clipPath id={`tc${clip}`}>
+          <rect x="0" y="-10" width={motion === 'full' ? 0 : W} height={H + 20}>
+            {motion === 'full' && <animate attributeName="width" from="0" to={W} dur="1.3s" fill="freeze" calcMode="spline" keySplines=".2 .8 .2 1" keyTimes="0;1" />}
+          </rect>
+        </clipPath>
         <line x1={x(now)} x2={x(now)} y1="4" y2={H - 14} className="now-line" />
-        <path d={line(model.curve)} className="pred" />
-        <path d={line(obs)} className="obs" />
+        <g clipPath={`url(#tc${clip})`}>
+          <path d={line(model.curve)} className="pred" />
+          <path d={line(obs)} className="obs" />
+        </g>
+        <circle cx={x(last.ts)} cy={y(last.level)} r="3.4" className="now-dot obs-dot" />
         {model.ext.map((e) => (
           <g key={e.ts}>
             <circle cx={x(e.ts)} cy={y(e.height)} r="2.6" className={e.type === 'haute' ? 'pm' : 'bm'} />
@@ -93,5 +106,37 @@ export function LiveTide({ lat, lon }: { lat: number; lon: number }) {
       </svg>
       <p className="muted small"><span className="lg obs-lg" /> mesuré <span className="lg pred-lg" /> prédit. Mesures réelles du marégraphe de {live.station.name} (réseau REFMAR du SHOM), à {Math.round(live.distance)} km de ton spot : sur place, le niveau peut différer un peu.</p>
     </div>
+  )
+}
+
+/** Petite scène de port : l'eau monte et descend contre le quai au niveau mesuré, un bateau flotte dessus. */
+function PortScene({ level, lo, hi, trend }: { level: number; lo: number; hi: number; trend: number }) {
+  const W = 320
+  const H = 78
+  const f = Math.max(0, Math.min(1, (level - lo) / (hi - lo)))
+  const surface = H - 8 - f * (H - 22) // y de la surface
+  const wave = 'M-60 0 q10 -3 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 V90 H-60z'
+  return (
+    <svg className="port" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Niveau ${level.toFixed(2)} m, ${trend > 0.02 ? 'mer qui monte' : trend < -0.02 ? 'mer qui descend' : 'étale'}`}>
+      <rect className="sky" x="0" y="0" width={W} height={H} rx="10" />
+      <g className="water" style={{ transform: `translateY(${surface}px)` }}>
+        <path className="surf" d={wave} />
+        <rect x="0" y="2" width={W} height={H} />
+      </g>
+      <rect className="quay" x="0" y="6" width="34" height={H - 6} rx="2" />
+      {[16, 30, 44, 58, 72].map((yy) => <line key={yy} className="ladder" x1="34" x2="40" y1={yy} y2={yy} />)}
+      <g className="marks">
+        <line x1="44" x2="52" y1={H - 8 - (H - 22)} y2={H - 8 - (H - 22)} />
+        <text x="54" y={H - 8 - (H - 22) + 2}>haut</text>
+        <line x1="44" x2="52" y1={H - 8} y2={H - 8} />
+        <text x="54" y={H - 6}>bas</text>
+      </g>
+      <g className="boat" style={{ transform: `translate(210px, ${surface - 9}px)` }}>
+        <g>
+          <path d="M0 6 h34 l-6 8 h-22z" />
+          <path d="M16 6 V-14 L28 4z" />
+        </g>
+      </g>
+    </svg>
   )
 }

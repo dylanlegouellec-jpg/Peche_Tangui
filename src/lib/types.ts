@@ -151,7 +151,27 @@ export interface Settings {
   lastName?: string
   /** Identifiant de la photo de profil (table photos). */
   avatarUid?: string
+  /** Style visuel : océan vivant, verre liquide ou carnet de bord. */
+  look?: Look
+  /** Niveau d'animation : complètes, légères (transitions seulement) ou aucune. */
+  motion?: Motion
+  /** Effets activables un par un. */
+  fx?: Partial<Fx>
 }
+
+export type Look = 'ocean' | 'glass' | 'logbook'
+export type Motion = 'full' | 'light' | 'off'
+export interface Fx {
+  /** Fond animé (mer, verre ou carte marine). */
+  background: boolean
+  /** Effets au toucher (bioluminescence, ondes, encre). */
+  touch: boolean
+  /** Animation au démarrage de l'appli. */
+  splash: boolean
+  /** Célébration des prises et des records. */
+  celebrate: boolean
+}
+export const DEFAULT_FX: Fx = { background: true, touch: true, splash: true, celebrate: true }
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 92, forecastDays: 8 }
 

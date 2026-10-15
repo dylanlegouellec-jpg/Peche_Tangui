@@ -4,6 +4,7 @@ import { buildReport, shareOrDownload } from '../lib/pdf'
 import { computeInsights, MIN_TRIPS } from '../lib/insights'
 import { computeStats, yearsOf, type Filters } from '../lib/stats'
 import { liveTrips } from '../lib/store'
+import { CountUp } from '../components/fx/CountUp'
 import type { Mode, Settings, Spot, Trip } from '../lib/types'
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
@@ -69,16 +70,16 @@ export function StatsView({ settings, defaultMode, spots, onBack }: { settings: 
         <>
           <div className="card weather">
             <div className="tiles">
-              <div className="tile"><strong>{stats.trips}</strong><span className="muted small">sorties</span></div>
-              <div className="tile"><strong>{stats.catches}</strong><span className="muted small">prises</span></div>
-              <div className="tile"><strong>{Math.round(((stats.trips - stats.blank) / stats.trips) * 100)} %</strong><span className="muted small">réussies</span></div>
-              <div className="tile"><strong>{stats.weight ? stats.weight.toFixed(1) : '—'}</strong><span className="muted small">kg</span></div>
+              <div className="tile"><strong><CountUp value={stats.trips} /></strong><span className="muted small">sorties</span></div>
+              <div className="tile"><strong><CountUp value={stats.catches} /></strong><span className="muted small">prises</span></div>
+              <div className="tile"><strong><CountUp value={Math.round(((stats.trips - stats.blank) / stats.trips) * 100)} /> %</strong><span className="muted small">réussies</span></div>
+              <div className="tile"><strong>{stats.weight ? <CountUp value={stats.weight} decimals={1} /> : '—'}</strong><span className="muted small">kg</span></div>
             </div>
             {stats.biggest && <p className="muted small">Plus belle prise : <strong>{stats.biggest.species} · {stats.biggest.size} cm</strong> ({stats.biggest.spot})</p>}
           </div>
 
           {stats.species.length > 0 && (
-            <div className="card">
+            <div className="card grow-bars">
               <h3>Par espèce</h3>
               {stats.species.slice(0, 10).map((s) => (
                 <div className="hbar" key={s.name}>
@@ -92,7 +93,7 @@ export function StatsView({ settings, defaultMode, spots, onBack }: { settings: 
 
           <div className="card">
             <h3>Par mois</h3>
-            <div className="mbars">
+            <div className="mbars grow-cols">
               {stats.months.map((n, i) => (
                 <div key={i} className="mcol">
                   <span className="small">{n || ''}</span>
