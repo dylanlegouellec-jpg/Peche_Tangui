@@ -171,7 +171,7 @@ export interface Fx {
   /** Célébration des prises et des records. */
   celebrate: boolean
 }
-export const DEFAULT_FX: Fx = { background: true, touch: true, splash: true, celebrate: true }
+export const DEFAULT_FX: Fx = { background: true, touch: false, splash: true, celebrate: true }
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'auto', windUnit: 'kmh', defaultMode: 'bord', tabOpacity: 92, forecastDays: 8 }
 

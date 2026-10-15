@@ -14,7 +14,7 @@ export const CHANGELOG: Release[] = [
       'Océan vivant : la mer en fond suit la houle, le vent, la pluie et l’heure (aube, jour, crépuscule, nuit) du spot affiché',
       'Score dans un hublot qui se remplit d’eau, boussole du vent et de la houle, lune avec sa vraie phase',
       'Courbe de marée qui se dessine et petite scène de port où l’eau monte et descend au niveau réel',
-      'Tirer pour actualiser avec une vague, écran de démarrage, effets au toucher (bioluminescence la nuit, ondes, encre)',
+      'Tirer pour actualiser avec une vague, écran de démarrage ; effets au toucher (bioluminescence, ondes, encre) désactivés par défaut, à activer dans Apparence → Effets',
       'Carte : marqueurs qui tombent, position GPS en sonar · Carnet : sorties en cartes, poisson qui saute à chaque prise, bulles pour un record, photos qui s’agrandissent',
       'Animations complètes, légères ou aucune, et chaque effet activable à part ; « Réduire les animations » de l’iPhone est respecté',
       'Historique des nouveautés dans le Diagnostic',
