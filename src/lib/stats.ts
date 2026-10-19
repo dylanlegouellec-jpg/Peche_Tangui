@@ -1,4 +1,4 @@
-import type { Mode, Trip } from './types'
+import { qty, totalCatches, type Mode, type Trip } from './types'
 
 export interface Filters {
   year: number | 'all'
@@ -47,7 +47,7 @@ export function computeStats(all: Trip[], f: Filters): Stats {
   let blank = 0
 
   for (const t of trips) {
-    const n = t.catches.length
+    const n = totalCatches(t.catches)
     if (!n) blank++
     catches += n
     months[new Date(t.date).getMonth()] += n
@@ -58,7 +58,7 @@ export function computeStats(all: Trip[], f: Filters): Stats {
     for (const c of t.catches) {
       const key = c.species.trim() || 'Inconnue'
       const s = species.get(key) ?? { name: key, count: 0, weight: 0 }
-      s.count++
+      s.count += qty(c)
       s.weight += c.weightKg ?? 0
       weight += c.weightKg ?? 0
       if (c.sizeCm && c.sizeCm > (s.maxSize ?? 0)) s.maxSize = c.sizeCm

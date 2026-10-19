@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef, useState } from 'react'
 import { DEPTH_STOPS, WMS_URL, depthAt, depthSld, describeDepth } from '../lib/bathy'
 import { liveTrips } from '../lib/store'
-import { SPOT_KINDS, kindEmoji, type Spot, type Trip } from '../lib/types'
+import { SPOT_KINDS, kindEmoji, totalCatches, type Spot, type Trip } from '../lib/types'
 
 export interface SpotSummary {
   trips: number
@@ -17,7 +17,7 @@ export function summarize(trips: Trip[]): Map<string, SpotSummary> {
   for (const t of trips) {
     const s = m.get(t.spotUid) ?? { trips: 0, catches: 0, species: [] }
     s.trips++
-    s.catches += t.catches.length
+    s.catches += totalCatches(t.catches)
     for (const c of t.catches) if (c.species && !s.species.includes(c.species)) s.species.push(c.species)
     m.set(t.spotUid, s)
   }

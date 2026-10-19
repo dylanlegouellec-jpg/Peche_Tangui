@@ -10,7 +10,7 @@ export interface FriendTrip {
   date: number
   spotName: string
   mode: 'bord' | 'plongee'
-  catches: { species: string; sizeCm?: number; weightKg?: number }[]
+  catches: { species: string; count?: number; sizeCm?: number; weightKg?: number }[]
   photoUids: string[]
   snapshot: { airTemp?: number | null; wind: number | null; wave: number | null; seaTemp: number | null; pressure: number | null; score: number | null } | null
 }

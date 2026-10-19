@@ -111,9 +111,21 @@ export interface HourScore {
 
 export interface CatchItem {
   species: string
+  /** Nombre de prises de cette espèce (1 si absent). */
+  count?: number
+  /** Taille (la plus grande s'il y en a plusieurs). */
   sizeCm?: number
+  /** Poids total de la ligne. */
   weightKg?: number
 }
+
+/** Nombre de prises d'une ligne (1 par défaut). */
+export const qty = (c: { count?: number }) => Math.max(1, Math.round(c.count ?? 1))
+/** Nombre total de prises d'une sortie. */
+export const totalCatches = (list: { count?: number }[]) => list.reduce((n, c) => n + qty(c), 0)
+/** « 6 × Araignée de mer 14 cm » */
+export const catchLabel = (c: { species: string; count?: number; sizeCm?: number; weightKg?: number }, withWeight = false) =>
+  `${qty(c) > 1 ? `${qty(c)} × ` : ''}${c.species}${c.sizeCm ? ` ${c.sizeCm} cm` : ''}${withWeight && c.weightKg ? ` · ${c.weightKg} kg` : ''}`
 
 export interface Trip {
   id?: number

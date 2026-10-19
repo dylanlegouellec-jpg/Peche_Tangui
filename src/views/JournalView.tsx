@@ -10,7 +10,7 @@ import { openPhoto } from '../components/fx/Lightbox'
 import { useEditing } from '../lib/editing'
 import { SPECIES } from '../lib/species'
 import { StatsView } from './StatsView'
-import type { CatchItem, Mode, Settings, Spot, Trip } from '../lib/types'
+import { catchLabel, qty, totalCatches, type CatchItem, type Mode, type Settings, type Spot, type Trip } from '../lib/types'
 
 const fmt = (ms: number) => new Date(ms).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
 
@@ -59,7 +59,7 @@ function Report({ trip, onClose }: { trip: Trip; onClose: () => void }) {
         </p>
       )}
       <h3>Prises</h3>
-      {trip.catches.length === 0 ? <p>Bredouille.</p> : <ul>{trip.catches.map((c, i) => <li key={i}>{c.species}{c.sizeCm ? ` · ${c.sizeCm} cm` : ''}{c.weightKg ? ` · ${c.weightKg} kg` : ''}</li>)}</ul>}
+      {trip.catches.length === 0 ? <p>Bredouille.</p> : <ul>{trip.catches.map((c, i) => <li key={i}>{catchLabel(c, true)}</li>)}</ul>}
       {trip.notes && <><h3>Notes</h3><p>{trip.notes}</p></>}
       <Photos uids={trip.photoUids} />
     </div>
@@ -108,7 +108,7 @@ export function JournalView({ spots, mode: defaultMode, settings, onRequests }: 
             <strong>{t.spotName}</strong>
             <span className="muted small">{fmt(t.date)}</span>
           </div>
-          <div>{t.catches.length ? t.catches.map((c) => c.species + (c.sizeCm ? ` ${c.sizeCm} cm` : '')).join(', ') : 'Bredouille'}</div>
+          <div>{t.catches.length ? t.catches.map((c) => catchLabel(c)).join(', ') : 'Bredouille'}</div>
           <Photos uids={t.photoUids.slice(0, 3)} />
           <div className="row">
             <button onClick={() => setOpen(t)}>Rapport</button>
@@ -168,7 +168,7 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
       return setError(`Enregistrement impossible : ${err instanceof Error && /quota/i.test(err.name + err.message) ? 'le téléphone n’a plus de place pour l’appli' : err instanceof Error ? err.message : 'erreur inconnue'}.`)
     }
     if (record) celebrate('record', `Record : ${record.species} de ${record.sizeCm} cm !`)
-    else if (kept.length) celebrate('catch', kept.length > 1 ? `${kept.length} prises enregistrées` : `${kept[0].species} enregistré${kept[0].species.endsWith('e') ? 'e' : ''} !`)
+    else if (kept.length) celebrate('catch', totalCatches(kept) > 1 ? `${totalCatches(kept)} prises enregistrées` : `${kept[0].species} enregistré${kept[0].species.endsWith('e') ? 'e' : ''} !`)
     onDone()
   }
 
@@ -185,10 +185,20 @@ function TripForm({ spots, defaultMode, onDone }: { spots: Spot[]; defaultMode: 
       <input className="dt" type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
       <datalist id="species">{SPECIES.map((s) => <option key={s.name} value={s.name} />)}</datalist>
       {catches.map((c, i) => (
-        <div className="row" key={i}>
-          <input list="species" placeholder="Espèce" value={c.species} onChange={(e) => patch(i, { species: e.target.value })} />
-          <input className="num" placeholder="cm" inputMode="decimal" value={c.sizeCm ?? ''} onChange={(e) => patch(i, { sizeCm: Number(e.target.value) || undefined })} />
-          <input className="num" placeholder="kg" inputMode="decimal" value={c.weightKg ?? ''} onChange={(e) => patch(i, { weightKg: Number(e.target.value.replace(',', '.')) || undefined })} />
+        <div className="catch-row" key={i}>
+          <div className="row">
+            <input list="species" placeholder="Espèce" value={c.species} onChange={(e) => patch(i, { species: e.target.value })} />
+            <button type="button" className="mini" onClick={() => setCatches(catches.filter((_, j) => j !== i))} aria-label="Retirer cette prise">✕</button>
+          </div>
+          <div className="row">
+          <div className="stepper" role="group" aria-label="Nombre de prises">
+            <button type="button" onClick={() => patch(i, { count: Math.max(1, qty(c) - 1) })} disabled={qty(c) <= 1} aria-label="Une de moins">−</button>
+            <input inputMode="numeric" value={qty(c)} onChange={(e) => patch(i, { count: Math.max(1, Math.min(999, Number(e.target.value.replace(/\D/g, '')) || 1)) })} aria-label="Nombre" />
+            <button type="button" onClick={() => patch(i, { count: Math.min(999, qty(c) + 1) })} aria-label="Une de plus">+</button>
+          </div>
+          <input className="num" placeholder={qty(c) > 1 ? 'cm max' : 'cm'} inputMode="decimal" value={c.sizeCm ?? ''} onChange={(e) => patch(i, { sizeCm: Number(e.target.value) || undefined })} />
+          <input className="num" placeholder={qty(c) > 1 ? 'kg total' : 'kg'} inputMode="decimal" value={c.weightKg ?? ''} onChange={(e) => patch(i, { weightKg: Number(e.target.value.replace(',', '.')) || undefined })} />
+          </div>
         </div>
       ))}
       <button type="button" onClick={() => setCatches([...catches, { species: '' }])}>+ Ajouter une prise</button>

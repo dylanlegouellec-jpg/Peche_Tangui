@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { friendFeed, friendPhotoUrl, listFriends, removeFriend, requestFriend, respondFriend, type Friend, type FriendTrip, type Pending } from '../lib/friends'
 import { getSyncState, subscribeSync } from '../lib/sync'
 import { openPhoto } from '../components/fx/Lightbox'
+import { catchLabel } from '../lib/types'
 
 const fmt = (ms: number) => new Date(ms).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
 
@@ -145,7 +146,7 @@ export function FriendsView({ onCount }: { onCount?: (n: number) => void }) {
                 <div className="muted small">{t.spotName} · {t.mode === 'bord' ? 'du bord' : 'sous-marine'} · {fmt(t.date)}</div>
               </div>
             </div>
-            <div>{t.catches.length ? t.catches.map((c) => c.species + (c.sizeCm ? ` ${c.sizeCm} cm` : '')).join(', ') : 'Bredouille'}</div>
+            <div>{t.catches.length ? t.catches.map((c) => catchLabel(c)).join(', ') : 'Bredouille'}</div>
             <div className="photos">{t.photoUids.slice(0, 3).map((u) => <Pic key={u} uid={u} alt="Prise" zoom />)}</div>
             {t.snapshot && <p className="muted small">Conditions : vent {t.snapshot.wind != null ? `${Math.round(t.snapshot.wind)} km/h` : '?'} · houle {t.snapshot.wave?.toFixed(1) ?? '?'} m · eau {t.snapshot.seaTemp?.toFixed(1) ?? '?'} °C</p>}
           </div>

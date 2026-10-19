@@ -7,6 +7,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-19',
+    title: 'Quantité par prise',
+    items: [
+      'Nombre de prises par espèce avec − / + (ex. 6 × Araignée de mer) : compté partout (carnet, bilan, carte, amis, PDF)',
+      'Taille « max » et poids « total » quand il y a plusieurs prises de la même espèce',
+      'Carte : le balayage vert du relief disparaît bien après son passage',
+    ],
+  },
+  {
     date: '2026-10-15',
     title: 'Refonte graphique : 3 styles et animations',
     items: [

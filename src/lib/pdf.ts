@@ -1,5 +1,6 @@
 import { photoBlobs } from './store'
 import type { Stats } from './stats'
+import { catchLabel, totalCatches } from './types'
 
 const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
 const NAVY: [number, number, number] = [11, 31, 46]
@@ -129,7 +130,7 @@ export async function buildReport(stats: Stats, meta: PdfMeta): Promise<Blob> {
   }
 
   // Plus belles prises en photo (les sorties les plus fournies)
-  const withPhotos = stats.tripsList.filter((t) => t.photoUids.length).sort((x, y2) => y2.catches.length - x.catches.length).slice(0, 6)
+  const withPhotos = stats.tripsList.filter((t) => t.photoUids.length).sort((x, y2) => totalCatches(y2.catches) - totalCatches(x.catches)).slice(0, 6)
   if (withPhotos.length) {
     const cell = (W - 2 * M - 8) / 3
     need(cell + 30) // titre + première rangée sur la même page
@@ -148,7 +149,7 @@ export async function buildReport(stats: Stats, meta: PdfMeta): Promise<Blob> {
       } catch {
         /* photo illisible : on passe */
       }
-      const label = `${t.catches.map((c) => c.species).slice(0, 2).join(', ') || 'Bredouille'} · ${new Date(t.date).toLocaleDateString('fr-FR')}`
+      const label = `${t.catches.map((c) => catchLabel(c)).slice(0, 2).join(', ') || 'Bredouille'} · ${new Date(t.date).toLocaleDateString('fr-FR')}`
       doc.setFont('helvetica', 'normal').setFontSize(7.5).setTextColor(...GREY).text(doc.splitTextToSize(label, cell), x, y + cell + 4)
       col++
       if (col === 3) {
@@ -167,7 +168,7 @@ export async function buildReport(stats: Stats, meta: PdfMeta): Promise<Blob> {
       text(`${new Date(t.date).toLocaleDateString('fr-FR')}  ${t.spotName}`, M, 9.5, NAVY, 'bold')
       text(t.mode === 'bord' ? 'bord de mer' : 'sous-marine', W - M - 28, 8.5, GREY)
       y += 4.6
-      const line = t.catches.length ? t.catches.map((c) => `${c.species}${c.sizeCm ? ` ${c.sizeCm} cm` : ''}${c.weightKg ? ` ${c.weightKg} kg` : ''}`).join(', ') : 'Bredouille'
+      const line = t.catches.length ? t.catches.map((c) => catchLabel(c, true)).join(', ') : 'Bredouille'
       const wrapped = doc.splitTextToSize(line, W - 2 * M) as string[]
       for (const l of wrapped.slice(0, 3)) {
         text(l, M, 9, GREY)

@@ -341,3 +341,8 @@ button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 .dragging .grip { cursor: grabbing; color: var(--accent); }
 .pick-n { flex: none; width: 18px; font-weight: 700; color: var(--muted); font-size: .85rem; text-align: center; }
 .pick-search { width: 100%; margin: 4px 0 6px; }
+.catch-row { display: flex; flex-direction: column; gap: 0; padding: 6px 0; border-top: 1px dashed var(--line); }
+.stepper { display: inline-flex; align-items: center; flex: none; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stepper button { width: 34px; height: 40px; padding: 0; border: 0; border-radius: 0; font-size: 1.2rem; font-weight: 700; background: color-mix(in srgb, var(--text) 5%, transparent); }
+form.card .stepper input { width: 40px; flex: none; margin: 0; padding: 0; border: 0; border-radius: 0; text-align: center; font-weight: 700; background: transparent; }
+.catch-row .row { gap: 8px; } .catch-row input.num { max-width: none; flex: 1; min-width: 0; }
