@@ -79,8 +79,9 @@ canvas.backdrop { width: 100vw; height: 100vh; display: block; }
 /* ======================= Barre d'onglets « goutte » =================== */
 /* Glissement fluide sans dépassement (un ressort dépassait d'autant plus que le trajet était long), léger étirement pendant le trajet */
 [data-motion='full'] .tabbar .pill { transition: transform .42s cubic-bezier(.22, 1, .36, 1); }
-[data-motion='full'] .tabbar.moving .pill { animation: goo .42s ease-out; }
-@keyframes goo { 0% { scale: 1 1; } 14% { scale: 1.1 .95; } 40% { scale: 1 1; } }
+[data-motion='full'] .tabbar.moving .pill { animation: goo .6s ease-out; }
+/* Petit rebond sur place à l'arrivée (écrasement puis retour), sans dépasser l'onglet */
+@keyframes goo { 0% { scale: 1 1; } 14% { scale: 1.08 .95; } 50% { scale: 1 1; } 66% { scale: .93 1.05; } 82% { scale: 1.03 .98; } 100% { scale: 1 1; } }
 
 /* ======================== Jauge du score (hublot) ===================== */
 .gauge { position: relative; width: 84px; height: 84px; flex: none; }
@@ -280,14 +281,14 @@ canvas.backdrop { width: 100vw; height: 100vh; display: block; }
   background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
 
-/* Sélecteur à pastille qui glisse (Mes sorties / Amis) */
-.seg.slide { position: relative; isolation: isolate; }
-.seg.slide .ind { position: absolute; z-index: -1; top: 0; bottom: 0; left: 0; width: 50%; border-radius: 10px; background: var(--accent); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .45s cubic-bezier(.34, 1.4, .5, 1); }
-.seg.slide button { background: transparent; transition: color .25s; }
-.seg.slide button.on { background: transparent; border-color: transparent; color: #fff; }
+/* Sélecteur à pastille qui glisse (façon iOS) : cadre arrondi, pastille arrondie à l'intérieur, aucun angle droit */
+.seg.slide { position: relative; isolation: isolate; display: flex; padding: 3px; gap: 0; background: var(--card); border: 1px solid var(--line); border-radius: 13px; }
+.seg.slide button, .seg.slide button:first-child, .seg.slide button:last-child { flex: 1; border: 0; border-radius: 10px; background: transparent; padding: 9px 12px; transition: color .25s; }
+.seg.slide button.on { background: transparent; color: #fff; }
+.seg.slide .ind { position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n, 2)); border-radius: 10px; background: var(--accent); box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .4s cubic-bezier(.22, 1, .36, 1); }
 [data-look='glass'] .seg.slide button { background: transparent !important; }
+[data-look='glass'] .seg.slide { background: var(--glass); -webkit-backdrop-filter: blur(18px) saturate(1.8); backdrop-filter: blur(18px) saturate(1.8); border-color: var(--edge); }
 /* Contenu qui glisse dans le sens du changement */
-.subswap { animation: sub-in .38s cubic-bezier(.22, 1, .36, 1) both; }
+.subswap { animation: sub-in .38s cubic-bezier(.22, 1, .36, 1) backwards; }
 .subswap.from-right { --from: 40px; } .subswap.from-left { --from: -40px; }
 @keyframes sub-in { from { opacity: 0; transform: translateX(var(--from)); } }
-.seg.slide { background: var(--card); border-radius: 10px; }

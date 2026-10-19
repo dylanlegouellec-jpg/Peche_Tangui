@@ -230,7 +230,8 @@ export function TodayView({ spots, spotId, setSpotId, mode, setMode, windUnit, f
             </option>
           ))}
         </select>
-        <div className="seg full" role="group" aria-label="Type de sortie">
+        <div className="seg full slide" role="group" aria-label="Type de sortie" style={{ ['--i' as string]: mode === 'bord' ? 0 : 1 }}>
+          <span className="ind" aria-hidden="true" />
           <button className={mode === 'bord' ? 'on' : ''} onClick={() => setMode('bord')}>
             Bord de mer
           </button>

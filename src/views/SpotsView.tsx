@@ -28,11 +28,13 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
 
   return (
     <section>
-      <div className="seg full" role="group" aria-label="Affichage">
+      <div className="seg full slide" role="group" aria-label="Affichage" style={{ ['--i' as string]: view === 'list' ? 0 : 1 }}>
+        <span className="ind" aria-hidden="true" />
         <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>Liste</button>
         <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>Carte</button>
       </div>
 
+      <div className={`subswap ${view === 'map' ? 'from-right' : 'from-left'}`} key={view}>
       {view === 'map' && (
         <>
           <SpotsMap spots={spots} onOpen={onOpenSpot} onAdd={(lat, lon) => setEditing({ name: '', lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) })} onMark={(lat, lon, accuracy) => setEditing({ name: '', lat, lon, accuracy, pin: true, kind: 'homard' })} onEdit={setEditing} />
@@ -82,6 +84,8 @@ export function SpotsView({ spots, onOpenSpot }: { spots: Spot[]; onOpenSpot: (i
           </div>
         </>
       )}
+
+      </div>
 
       {editing && <SpotEditor spot={editing} onSave={save} onClose={() => setEditing(null)} />}
     </section>
