@@ -346,3 +346,9 @@ button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 .stepper button { width: 34px; height: 40px; padding: 0; border: 0; border-radius: 0; font-size: 1.2rem; font-weight: 700; background: color-mix(in srgb, var(--text) 5%, transparent); }
 form.card .stepper input { width: 40px; flex: none; margin: 0; padding: 0; border: 0; border-radius: 0; text-align: center; font-weight: 700; background: transparent; }
 .catch-row .row { gap: 8px; } .catch-row input.num { max-width: none; flex: 1; min-width: 0; }
+
+/* Lignes blanches entre les tuiles de carte (iPhone, écran Retina) : on fait chevaucher les tuiles d'un demi-pixel et le fond de carte prend la couleur de la mer */
+.leaflet-tile-container img.leaflet-tile { width: 256.5px !important; height: 256.5px !important; }
+.map .leaflet-container { background: #aad3df; }
+:root[data-theme='dark'] .map .leaflet-container { background: #1f3442; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .map .leaflet-container { background: #1f3442; } }

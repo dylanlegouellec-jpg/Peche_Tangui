@@ -66,12 +66,20 @@ function Report({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   )
 }
 
+// Arrivée dans le Carnet par un glissement depuis Spots : on ouvre directement « Amis », l'écran voisin
+let entry: 'mine' | 'friends' = 'mine'
+export const enterJournalAt = (t: 'mine' | 'friends') => void (entry = t)
+
 export function JournalView({ spots, mode: defaultMode, settings, onRequests }: { spots: Spot[]; mode: Mode; settings: Settings; onRequests?: (n: number) => void }) {
   const [stats, setStats] = useState(false)
   const [trips, setTrips] = useState<Trip[]>([])
   const [open, setOpen] = useState<Trip | null>(null)
   const [adding, setAdding] = useState(false)
-  const [tab, setTab] = useState<'mine' | 'friends'>('mine')
+  const [tab, setTab] = useState<'mine' | 'friends'>(() => {
+    const t = entry
+    entry = 'mine'
+    return t
+  })
   const [requests, setRequests] = useState(0)
 
   useEffect(() => {
@@ -79,17 +87,36 @@ export function JournalView({ spots, mode: defaultMode, settings, onRequests }: 
     return () => sub.unsubscribe()
   }, [])
 
+  // Glisser gauche/droite dans le Carnet : passe d'abord de « Mes sorties » à « Amis » (et inversement) avant de changer d'onglet
+  const switchTab = (t: 'mine' | 'friends') => {
+    if (t === tab) return
+    setTab(t)
+    document.querySelector('.scroll')?.scrollTo({ top: 0 })
+  }
+  useEffect(() => {
+    const on = (e: Event) => {
+      if (adding || open || stats) return
+      const d = (e as CustomEvent<'next' | 'prev'>).detail
+      if (d === 'next' && tab === 'mine') (e.preventDefault(), switchTab('friends'))
+      else if (d === 'prev' && tab === 'friends') (e.preventDefault(), switchTab('mine'))
+    }
+    window.addEventListener('peche-swipe', on)
+    return () => window.removeEventListener('peche-swipe', on)
+  })
+
   if (open) return <Report trip={open} onClose={() => setOpen(null)} />
   if (stats) return <StatsView settings={settings} defaultMode={defaultMode} spots={spots} onBack={() => setStats(false)} />
 
   return (
     <section>
       {!adding && (
-        <div className="seg full" role="group" aria-label="Journal">
-          <button className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>Mes sorties</button>
-          <button className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Amis{requests ? ` (${requests})` : ''}</button>
+        <div className="seg full slide" role="group" aria-label="Journal" style={{ ['--i' as string]: tab === 'mine' ? 0 : 1 }}>
+          <span className="ind" aria-hidden="true" />
+          <button className={tab === 'mine' ? 'on' : ''} onClick={() => switchTab('mine')}>Mes sorties</button>
+          <button className={tab === 'friends' ? 'on' : ''} onClick={() => switchTab('friends')}>Amis{requests ? ` (${requests})` : ''}</button>
         </div>
       )}
+      <div className={`subswap ${tab === 'friends' ? 'from-right' : 'from-left'}`} key={tab}>
       {tab === 'friends' && !adding && <FriendsView onCount={(n) => { setRequests(n); onRequests?.(n) }} />}
       {tab === 'mine' && (<>
       {adding ? (
@@ -120,6 +147,7 @@ export function JournalView({ spots, mode: defaultMode, settings, onRequests }: 
       </div>
       {!adding && trips.length === 0 && <p className="muted">Aucune sortie pour l’instant. Chaque sortie enregistrée garde aussi les conditions du moment, pour apprendre ce qui marche chez toi.</p>}
       </>)}
+      </div>
     </section>
   )
 }

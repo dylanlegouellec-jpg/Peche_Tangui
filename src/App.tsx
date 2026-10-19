@@ -15,7 +15,7 @@ import { liveSpots } from './lib/store'
 import { getSyncState, startAutoSync, subscribeSync } from './lib/sync'
 import { listFriends } from './lib/friends'
 import { DEFAULT_FX, DEFAULT_SETTINGS, type Mode, type Settings, type Spot } from './lib/types'
-import { JournalView } from './views/JournalView'
+import { JournalView, enterJournalAt } from './views/JournalView'
 import { SettingsView } from './views/SettingsView'
 import { SpeciesView } from './views/SpeciesView'
 import { SpotsView } from './views/SpotsView'
@@ -107,6 +107,76 @@ export default function App() {
     setTab(t)
     scrollRef.current?.scrollTo({ top: 0 })
   }
+
+  // Glisser gauche/droite pour changer d'onglet : la page suit le doigt, puis bascule si le geste est assez long.
+  // Un écran peut d'abord s'en servir pour lui-même (ex. Carnet : Mes sorties ↔ Amis) en annulant l'événement « peche-swipe ».
+  const tabRef = useRef(tab)
+  tabRef.current = tab
+  const changeTabRef = useRef(changeTab)
+  changeTabRef.current = changeTab
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    // Zones qui ont leur propre glissement horizontal
+    const own = '.days, .cam-row, .spark, .map, .leaflet-container, input, textarea, select, .sheet, .pick-list, .chips, .tide-chart, .no-swipe'
+    let sx = 0
+    let sy = 0
+    let axis: 'h' | 'v' | null = null
+    let on = false
+    let page: HTMLElement | null = null
+    const motion = () => document.documentElement.dataset.motion !== 'off'
+    const reset = (animate: boolean) => {
+      if (!page) return
+      page.style.transition = animate ? 'transform .3s cubic-bezier(.2,.8,.2,1), opacity .3s' : ''
+      page.style.transform = ''
+      page.style.opacity = ''
+    }
+    const start = (e: TouchEvent) => {
+      on = e.touches.length === 1 && !(e.target instanceof Element && e.target.closest(own))
+      axis = null
+      if (!on) return
+      sx = e.touches[0].clientX
+      sy = e.touches[0].clientY
+      page = el.querySelector('.page')
+    }
+    const move = (e: TouchEvent) => {
+      if (!on) return
+      const dx = e.touches[0].clientX - sx
+      const dy = e.touches[0].clientY - sy
+      if (!axis && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) axis = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'h' : 'v'
+      if (axis === 'h' && page && motion()) {
+        page.style.animation = 'none' // l'animation d'arrivée ne doit plus imposer sa position
+        page.style.transition = 'none'
+        page.style.transform = `translateX(${dx * 0.35}px)`
+        page.style.opacity = String(1 - Math.min(0.35, Math.abs(dx) / 900))
+      }
+    }
+    const end = (e: TouchEvent) => {
+      if (!on || axis !== 'h') return reset(false)
+      const dx = (e.changedTouches[0]?.clientX ?? sx) - sx
+      on = false
+      if (Math.abs(dx) < 70) return reset(true)
+      const dirn = dx < 0 ? 'next' : 'prev'
+      // L'écran affiché peut utiliser le geste (sous-onglets) : il annule alors l'événement
+      const used = !window.dispatchEvent(new CustomEvent('peche-swipe', { detail: dirn, cancelable: true }))
+      reset(used)
+      if (used) return
+      const i = ORDER.indexOf(tabRef.current) + (dirn === 'next' ? 1 : -1)
+      if (i < 0 || i >= ORDER.length) return
+      if (ORDER[i] === 'journal' && dirn === 'prev') enterJournalAt('friends')
+      changeTabRef.current(ORDER[i])
+    }
+    el.addEventListener('touchstart', start, { passive: true })
+    el.addEventListener('touchmove', move, { passive: true })
+    el.addEventListener('touchend', end, { passive: true })
+    el.addEventListener('touchcancel', end, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', start)
+      el.removeEventListener('touchmove', move)
+      el.removeEventListener('touchend', end)
+      el.removeEventListener('touchcancel', end)
+    }
+  }, [])
 
   const currentMode = mode ?? settings.defaultMode
   // Les marqueurs personnels (coin à homard…) n'ont pas de prévisions : ils restent sur la carte.

@@ -8,8 +8,11 @@ export interface Release {
 export const CHANGELOG: Release[] = [
   {
     date: '2026-10-19',
-    title: 'Quantité par prise',
+    title: 'Quantité par prise, glisser entre onglets',
     items: [
+      'Glisser à gauche ou à droite pour changer d’onglet (la page suit le doigt) ; dans le Carnet, passe d’abord de Mes sorties à Amis',
+      'Transition fluide entre Mes sorties et Amis, avec une pastille qui glisse',
+      'Carte : plus de lignes blanches entre les morceaux de carte sur iPhone',
       'Nombre de prises par espèce avec − / + (ex. 6 × Araignée de mer) : compté partout (carnet, bilan, carte, amis, PDF)',
       'Taille « max » et poids « total » quand il y a plusieurs prises de la même espèce',
       'Carte : le balayage vert du relief disparaît bien après son passage',
