@@ -77,9 +77,10 @@ canvas.backdrop { width: 100vw; height: 100vh; display: block; }
 [data-look='logbook'] .score { border-style: double; border-width: 4px; }
 
 /* ======================= Barre d'onglets « goutte » =================== */
-[data-motion='full'] .tabbar .pill { transition: transform .55s cubic-bezier(.34, 1.6, .5, 1), border-radius .3s; }
-[data-motion='full'] .tabbar.moving .pill { animation: goo .5s cubic-bezier(.3, .7, .3, 1); }
-@keyframes goo { 35% { scale: 1.35 .82; border-radius: 40%; } 70% { scale: .94 1.06; } }
+/* Glissement fluide sans dépassement (un ressort dépassait d'autant plus que le trajet était long), léger étirement pendant le trajet */
+[data-motion='full'] .tabbar .pill { transition: transform .42s cubic-bezier(.22, 1, .36, 1); }
+[data-motion='full'] .tabbar.moving .pill { animation: goo .42s ease-out; }
+@keyframes goo { 0% { scale: 1 1; } 14% { scale: 1.1 .95; } 40% { scale: 1 1; } }
 
 /* ======================== Jauge du score (hublot) ===================== */
 .gauge { position: relative; width: 84px; height: 84px; flex: none; }
@@ -138,7 +139,7 @@ canvas.backdrop { width: 100vw; height: 100vh; display: block; }
 @keyframes bob { 50% { transform: translateY(-1.5px) rotate(3deg); } }
 
 /* ============================ Carte ============================ */
-[data-motion='full'] .leaflet-marker-icon .pin { animation: pin-drop .7s cubic-bezier(.34, 1.56, .64, 1) both; animation-delay: var(--d, 0ms); }
+[data-motion='full'] .leaflet-marker-icon .pin { animation: pin-drop .7s cubic-bezier(.34, 1.56, .64, 1) backwards; animation-delay: var(--d, 0ms); }
 @keyframes pin-drop { from { opacity: 0; translate: 0 -46px; } 60% { opacity: 1; } }
 .sonar { position: relative; width: 22px; height: 22px; }
 .sonar b { position: absolute; inset: 4px; border-radius: 50%; background: #2f7de1; border: 3px solid #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, .4); }

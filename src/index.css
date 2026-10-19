@@ -62,7 +62,7 @@ h3.sec { margin: 18px 0 0; color: var(--muted); font-size: .85rem; text-transfor
   background: color-mix(in srgb, var(--accent) 24%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   transform: translateX(calc(var(--i) * 100%));
-  transition: transform .55s cubic-bezier(.34, 1.6, .5, 1);
+  transition: transform .42s cubic-bezier(.22, 1, .36, 1);
 }
 .tabbar button {
   position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -111,7 +111,7 @@ form.card .warn { margin: 4px 0; }
 @media (prefers-reduced-motion: reduce) { .subpage { animation: none; } }
 
 /* Transition entre onglets : glissement dans le sens de la navigation + fondu */
-.page { animation: page-in .42s cubic-bezier(.22, 1, .36, 1) both; will-change: transform, opacity; }
+.page { animation: page-in .42s cubic-bezier(.22, 1, .36, 1) backwards; }
 .page.page-back { animation-name: page-in-back; }
 @keyframes page-in { from { opacity: 0; transform: translateX(34px) scale(.985); } to { opacity: 1; transform: none; } }
 @keyframes page-in-back { from { opacity: 0; transform: translateX(-34px) scale(.985); } to { opacity: 1; transform: none; } }
@@ -347,8 +347,3 @@ button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 form.card .stepper input { width: 40px; flex: none; margin: 0; padding: 0; border: 0; border-radius: 0; text-align: center; font-weight: 700; background: transparent; }
 .catch-row .row { gap: 8px; } .catch-row input.num { max-width: none; flex: 1; min-width: 0; }
 
-/* Lignes blanches entre les tuiles de carte (iPhone, écran Retina) : on fait chevaucher les tuiles d'un demi-pixel et le fond de carte prend la couleur de la mer */
-.leaflet-tile-container img.leaflet-tile { width: 256.5px !important; height: 256.5px !important; }
-.map .leaflet-container { background: #aad3df; }
-:root[data-theme='dark'] .map .leaflet-container { background: #1f3442; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) .map .leaflet-container { background: #1f3442; } }

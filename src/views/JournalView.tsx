@@ -66,20 +66,12 @@ function Report({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   )
 }
 
-// Arrivée dans le Carnet par un glissement depuis Spots : on ouvre directement « Amis », l'écran voisin
-let entry: 'mine' | 'friends' = 'mine'
-export const enterJournalAt = (t: 'mine' | 'friends') => void (entry = t)
-
 export function JournalView({ spots, mode: defaultMode, settings, onRequests }: { spots: Spot[]; mode: Mode; settings: Settings; onRequests?: (n: number) => void }) {
   const [stats, setStats] = useState(false)
   const [trips, setTrips] = useState<Trip[]>([])
   const [open, setOpen] = useState<Trip | null>(null)
   const [adding, setAdding] = useState(false)
-  const [tab, setTab] = useState<'mine' | 'friends'>(() => {
-    const t = entry
-    entry = 'mine'
-    return t
-  })
+  const [tab, setTab] = useState<'mine' | 'friends'>('mine')
   const [requests, setRequests] = useState(0)
 
   useEffect(() => {
@@ -87,22 +79,11 @@ export function JournalView({ spots, mode: defaultMode, settings, onRequests }: 
     return () => sub.unsubscribe()
   }, [])
 
-  // Glisser gauche/droite dans le Carnet : passe d'abord de « Mes sorties » à « Amis » (et inversement) avant de changer d'onglet
   const switchTab = (t: 'mine' | 'friends') => {
     if (t === tab) return
     setTab(t)
     document.querySelector('.scroll')?.scrollTo({ top: 0 })
   }
-  useEffect(() => {
-    const on = (e: Event) => {
-      if (adding || open || stats) return
-      const d = (e as CustomEvent<'next' | 'prev'>).detail
-      if (d === 'next' && tab === 'mine') (e.preventDefault(), switchTab('friends'))
-      else if (d === 'prev' && tab === 'friends') (e.preventDefault(), switchTab('mine'))
-    }
-    window.addEventListener('peche-swipe', on)
-    return () => window.removeEventListener('peche-swipe', on)
-  })
 
   if (open) return <Report trip={open} onClose={() => setOpen(null)} />
   if (stats) return <StatsView settings={settings} defaultMode={defaultMode} spots={spots} onBack={() => setStats(false)} />

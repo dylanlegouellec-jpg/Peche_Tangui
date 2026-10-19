@@ -15,7 +15,7 @@ import { liveSpots } from './lib/store'
 import { getSyncState, startAutoSync, subscribeSync } from './lib/sync'
 import { listFriends } from './lib/friends'
 import { DEFAULT_FX, DEFAULT_SETTINGS, type Mode, type Settings, type Spot } from './lib/types'
-import { JournalView, enterJournalAt } from './views/JournalView'
+import { JournalView } from './views/JournalView'
 import { SettingsView } from './views/SettingsView'
 import { SpeciesView } from './views/SpeciesView'
 import { SpotsView } from './views/SpotsView'
@@ -109,7 +109,6 @@ export default function App() {
   }
 
   // Glisser gauche/droite pour changer d'onglet : la page suit le doigt, puis bascule si le geste est assez long.
-  // Un écran peut d'abord s'en servir pour lui-même (ex. Carnet : Mes sorties ↔ Amis) en annulant l'événement « peche-swipe ».
   const tabRef = useRef(tab)
   tabRef.current = tab
   const changeTabRef = useRef(changeTab)
@@ -157,13 +156,9 @@ export default function App() {
       on = false
       if (Math.abs(dx) < 70) return reset(true)
       const dirn = dx < 0 ? 'next' : 'prev'
-      // L'écran affiché peut utiliser le geste (sous-onglets) : il annule alors l'événement
-      const used = !window.dispatchEvent(new CustomEvent('peche-swipe', { detail: dirn, cancelable: true }))
-      reset(used)
-      if (used) return
+      reset(false)
       const i = ORDER.indexOf(tabRef.current) + (dirn === 'next' ? 1 : -1)
       if (i < 0 || i >= ORDER.length) return
-      if (ORDER[i] === 'journal' && dirn === 'prev') enterJournalAt('friends')
       changeTabRef.current(ORDER[i])
     }
     el.addEventListener('touchstart', start, { passive: true })

@@ -114,6 +114,8 @@ export function SpotsMap({ spots, onOpen, onAdd, onMark, onEdit }: Props) {
       box?.classList.remove('relief-scan')
       void box?.offsetWidth
       box?.classList.add('relief-scan')
+      // Le calque du balayage est retiré dès qu'il est passé : resté au-dessus de la carte, il faisait apparaître des lignes entre les morceaux de carte sur iPhone
+      setTimeout(() => box?.classList.remove('relief-scan'), 1700)
     } else bathy.current.remove()
   }, [ready, relief])
 
