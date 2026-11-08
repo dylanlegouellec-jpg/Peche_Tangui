@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ton cadeau de Noël</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;700;800&display=swap">
+<style>
+/* Une seule scène nocturne enneigée, plein écran, trois étapes : cadeau → jeu → révélation */
+:root {
+  --night: #0d2b24;
+  --night-2: #143d33;
+  --snow: #f7f4ee;
+  --red: #c8313b;
+  --red-dark: #8f1d26;
+  --gold: #e9b949;
+  --muted: #b9cfc6;
+  --pink: #e0457b;
+  --display: "Mountains of Christmas", "Georgia", serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: radial-gradient(120% 80% at 50% 0%, var(--night-2), var(--night) 70%);
+  background-color: var(--night);
+  color: var(--snow);
+  font-family: var(--body);
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#snow { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.stage {
+  position: relative; z-index: 1;
+  height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px;
+  text-align: center;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+}
+h1 {
+  font-family: var(--display);
+  font-size: clamp(2.4rem, 9vw, 4rem);
+  line-height: 1;
+  margin: 0;
+  color: var(--gold);
+  text-shadow: 0 2px 0 var(--red-dark), 0 0 24px rgba(233,185,73,.35);
+  text-wrap: balance;
+}
+p { margin: 0; max-width: 34ch; font-size: 1.05rem; line-height: 1.5; color: var(--muted); }
+p strong { color: var(--snow); }
+.btn {
+  font: 800 1.05rem var(--body);
+  color: var(--snow);
+  background: var(--red);
+  border: 0; border-radius: 999px;
+  padding: 14px 28px;
+  box-shadow: 0 5px 0 var(--red-dark), 0 10px 24px rgba(0,0,0,.35);
+  cursor: pointer;
+  transition: transform .1s;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--red-dark); }
+.btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+
+/* Cadeau */
+.gift { width: min(220px, 55vw); cursor: pointer; animation: wobble 2.4s ease-in-out infinite; }
+.gift:focus-visible { outline: 3px dashed var(--gold); outline-offset: 8px; border-radius: 12px; }
+@keyframes wobble {
+  0%, 70%, 100% { transform: rotate(0); }
+  75% { transform: rotate(-6deg); } 80% { transform: rotate(6deg); }
+  85% { transform: rotate(-4deg); } 90% { transform: rotate(3deg); }
+}
+.tag {
+  font-family: var(--display); font-size: 1.5rem; color: var(--red-dark);
+  background: var(--snow); padding: 4px 14px; border-radius: 6px;
+  transform: rotate(-4deg); box-shadow: 0 4px 10px rgba(0,0,0,.3);
+}
+
+/* Jeu */
+#game { justify-content: flex-start; padding-block: 12px 0; gap: 8px; }
+.hud {
+  display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;
+  font-weight: 800; font-size: 1rem;
+}
+.pill { background: rgba(0,0,0,.28); border: 1px solid rgba(247,244,238,.18); padding: 6px 14px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.bar { width: min(320px, 80vw); height: 12px; border-radius: 999px; background: rgba(0,0,0,.3); overflow: hidden; border: 1px solid rgba(247,244,238,.2); }
+.bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(45deg, var(--red) 0 10px, var(--snow) 10px 20px); transition: width .25s; }
+.hint { font-size: .9rem; color: var(--muted); }
+#play { flex: 1; width: 100%; max-width: 520px; min-height: 0; touch-action: none; display: block; }
+
+/* Révélation */
+.box-open { position: relative; width: min(300px, 80vw); height: 230px; }
+.box-open .lid { position: absolute; left: 50%; top: 40px; width: 78%; transform: translateX(-50%); z-index: 3; }
+.box-open .base { position: absolute; left: 50%; bottom: 0; width: 70%; transform: translateX(-50%); z-index: 2; }
+.box-open.go .lid { animation: lid 1s cubic-bezier(.3,1.6,.5,1) forwards; }
+@keyframes lid { to { transform: translate(-130%, -120px) rotate(-35deg); opacity: 0; } }
+.test {
+  position: absolute; left: 50%; bottom: 30px; margin-left: -32px; width: 64px; z-index: 1;
+  transform: translateY(40px) rotate(0);
+  opacity: 0;
+}
+.box-open.go .test { animation: rise 1.2s .6s ease-out forwards; }
+@keyframes rise { to { transform: translateY(-40px) rotate(-90deg); opacity: 1; } }
+.line { opacity: 0; }
+.line.show { animation: ink 1.6s ease-in forwards; }
+@keyframes ink { to { opacity: 1; } }
+.status { min-height: 1.6em; font-weight: 800; font-size: 1.1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.result { display: grid; gap: 12px; justify-items: center; opacity: 0; transform: translateY(12px); transition: opacity .8s, transform .8s; }
+.result.show { opacity: 1; transform: none; }
+.big {
+  font-family: var(--display); font-size: clamp(2.8rem, 12vw, 4.6rem); line-height: 1;
+  color: var(--snow); text-shadow: 0 0 20px rgba(224,69,123,.6), 0 3px 0 var(--pink);
+}
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gift { animation: none; }
+  .box-open.go .lid, .box-open.go .test, .line.show { animation-duration: .01s; animation-delay: 0s; }
+}
+</style>
+</head>
+<body>
+
+
+<canvas id="snow" aria-hidden="true"></canvas>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<!-- Étape 1 : le cadeau -->
+<section class="stage" id="intro">
+  <div class="tag" id="toName">Pour toi ❤️</div>
+  <svg class="gift" id="giftBtn" role="button" tabindex="0" aria-label="Ouvrir le cadeau" viewBox="0 0 200 200">
+    <rect x="25" y="85" width="150" height="105" rx="6" fill="#c8313b"/>
+    <rect x="25" y="85" width="150" height="16" fill="#8f1d26" opacity=".5"/>
+    <rect x="15" y="62" width="170" height="30" rx="5" fill="#d9434c"/>
+    <rect x="88" y="62" width="24" height="128" fill="#e9b949"/>
+    <path d="M100 62 C 70 20, 35 40, 60 60 Z" fill="#e9b949" stroke="#b88a24" stroke-width="3"/>
+    <path d="M100 62 C 130 20, 165 40, 140 60 Z" fill="#e9b949" stroke="#b88a24" stroke-width="3"/>
+    <circle cx="100" cy="60" r="9" fill="#b88a24"/>
+  </svg>
+  <h1>Joyeux Noël&nbsp;!</h1>
+  <p>Le Père Noël a déposé un cadeau très spécial pour toi. Mais il est un peu farceur&nbsp;: <strong>il faut le mériter</strong>.</p>
+  <button class="btn" id="startBtn" type="button">Ouvrir mon cadeau 🎁</button>
+</section>
+
+<!-- Étape 2 : le jeu -->
+<section class="stage" id="game" hidden>
+  <div class="hud">
+    <span class="pill">🎁 <span id="score">0</span> / <span id="goal">10</span></span>
+    <span class="pill">❤️ <span id="lives">3</span></span>
+  </div>
+  <div class="bar" aria-hidden="true"><i id="progress"></i></div>
+  <div class="hint">Glisse le traîneau pour attraper les cadeaux. Évite le charbon&nbsp;!</div>
+  <canvas id="play" aria-label="Jeu : attrape les cadeaux"></canvas>
+</section>
+
+<!-- Étape 3 : la révélation -->
+<section class="stage" id="reveal" hidden>
+  <h1 id="revealTitle">Bravo&nbsp;!</h1>
+  <div class="box-open" id="boxOpen">
+    <!-- le test -->
+    <svg class="test" viewBox="0 0 60 260" aria-label="Test de grossesse">
+      <rect x="4" y="4" width="52" height="252" rx="26" fill="#ffffff" stroke="#d8d3cb" stroke-width="3"/>
+      <rect x="4" y="170" width="52" height="86" rx="26" fill="#8fc7e8"/>
+      <rect x="4" y="170" width="52" height="30" fill="#8fc7e8"/>
+      <rect x="16" y="40" width="28" height="90" rx="8" fill="#f2efe9" stroke="#cfc8bd" stroke-width="2"/>
+      <rect class="line" id="lineC" x="19" y="58" width="22" height="7" rx="2" fill="#e0457b"/>
+      <rect class="line" id="lineT" x="19" y="96" width="22" height="7" rx="2" fill="#e0457b"/>
+      <text x="48" y="64" font-size="9" font-family="sans-serif" fill="#9a948a">C</text>
+      <text x="48" y="102" font-size="9" font-family="sans-serif" fill="#9a948a">T</text>
+      <circle cx="30" cy="150" r="7" fill="none" stroke="#cfc8bd" stroke-width="2"/>
+    </svg>
+    <svg class="base" viewBox="0 0 200 120" aria-hidden="true">
+      <rect x="5" y="5" width="190" height="110" rx="6" fill="#c8313b"/>
+      <rect x="88" y="5" width="24" height="110" fill="#e9b949"/>
+    </svg>
+    <svg class="lid" viewBox="0 0 220 80" aria-hidden="true">
+      <rect x="5" y="40" width="210" height="34" rx="5" fill="#d9434c"/>
+      <rect x="98" y="40" width="24" height="34" fill="#e9b949"/>
+      <path d="M110 40 C 80 0, 45 18, 70 38 Z" fill="#e9b949" stroke="#b88a24" stroke-width="3"/>
+      <path d="M110 40 C 140 0, 175 18, 150 38 Z" fill="#e9b949" stroke="#b88a24" stroke-width="3"/>
+    </svg>
+  </div>
+  <div class="status" id="status" aria-live="polite"></div>
+  <div class="result" id="result">
+    <div class="big">POSITIF</div>
+    <p id="finalMsg"><strong>Joyeux Noël, future maman&nbsp;!</strong><br>Le plus beau cadeau arrive dans 9 mois 👶🎄</p>
+    <button class="btn" id="againBtn" type="button">Rejouer ❄️</button>
+  </div>
+</section>
+
+<script>
+(() => {
+  // ====== À PERSONNALISER ======
+  const PRENOM = "";        // ex: "Léa" → affiche « Pour Léa ❤️ »
+  const OBJECTIF = 10;      // nombre de cadeaux à attraper
+  // =============================
+
+  if (PRENOM) document.getElementById("toName").textContent = "Pour " + PRENOM + " ❤️";
+  document.getElementById("goal").textContent = OBJECTIF;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => ["intro", "game", "reveal"].forEach(s => $(s).hidden = s !== id);
+
+  // ---------- neige d'ambiance ----------
+  const sc = $("snow"), sx = sc.getContext("2d");
+  let flakes = [];
+  function sizeSnow() {
+    const d = devicePixelRatio || 1;
+    sc.width = innerWidth * d; sc.height = innerHeight * d;
+    sx.setTransform(d, 0, 0, d, 0, 0);
+    flakes = Array.from({ length: Math.min(120, Math.round(innerWidth / 6)) }, () => ({
+      x: Math.random() * innerWidth, y: Math.random() * innerHeight,
+      r: 1 + Math.random() * 2.6, s: .3 + Math.random() * .9, w: Math.random() * 6.28
+    }));
+  }
+  function drawSnow() {
+    sx.clearRect(0, 0, innerWidth, innerHeight);
+    sx.fillStyle = "rgba(247,244,238,.85)";
+    for (const f of flakes) {
+      if (!reduce) { f.y += f.s; f.w += .01; f.x += Math.sin(f.w) * .3; }
+      if (f.y > innerHeight + 5) { f.y = -5; f.x = Math.random() * innerWidth; }
+      sx.beginPath(); sx.arc(f.x, f.y, f.r, 0, 6.283); sx.fill();
+    }
+    requestAnimationFrame(drawSnow);
+  }
+  addEventListener("resize", sizeSnow); sizeSnow(); drawSnow();
+
+  // ---------- étape 1 ----------
+  const start = () => { show("game"); startGame(); };
+  $("startBtn").onclick = start;
+  $("giftBtn").onclick = start;
+  $("giftBtn").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); start(); } };
+
+  // ---------- étape 2 : le jeu ----------
+  const pc = $("play"), px = pc.getContext("2d");
+  let W = 0, H = 0, sled, items, score, lives, running = false, last = 0, spawnT = 0, shake = 0;
+
+  function sizePlay() {
+    const d = devicePixelRatio || 1, r = pc.getBoundingClientRect();
+    W = r.width; H = r.height;
+    pc.width = W * d; pc.height = H * d;
+    px.setTransform(d, 0, 0, d, 0, 0);
+    if (sled) sled.y = H - 46;
+  }
+  function startGame() {
+    sizePlay();
+    sled = { x: W / 2, y: H - 46, w: 74, tx: W / 2 };
+    items = []; score = 0; lives = 3; spawnT = 0; shake = 0;
+    updateHud(); running = true; last = performance.now();
+    requestAnimationFrame(loop);
+  }
+  function updateHud() {
+    $("score").textContent = score;
+    $("lives").textContent = lives;
+    $("progress").style.width = (score / OBJECTIF * 100) + "%";
+  }
+  function move(e) {
+    const r = pc.getBoundingClientRect();
+    sled.tx = Math.max(sled.w / 2, Math.min(W - sled.w / 2, e.clientX - r.left));
+  }
+  pc.addEventListener("pointerdown", (e) => { move(e); pc.setPointerCapture?.(e.pointerId); });
+  pc.addEventListener("pointermove", move);
+  addEventListener("keydown", (e) => {
+    if (!running) return;
+    if (e.key === "ArrowLeft") sled.tx = Math.max(sled.w / 2, sled.tx - 40);
+    if (e.key === "ArrowRight") sled.tx = Math.min(W - sled.w / 2, sled.tx + 40);
+  });
+  addEventListener("resize", () => { if (running) sizePlay(); });
+
+  function spawn() {
+    const coal = Math.random() < Math.min(.35, .15 + score * .02);
+    const emoji = coal ? "🪨" : ["🎁", "🎁", "🎁", "🧸", "🍬", "⭐"][Math.floor(Math.random() * 6)];
+    items.push({ x: 24 + Math.random() * (W - 48), y: -30, v: 110 + Math.random() * 60 + score * 9, coal, emoji, rot: Math.random() * 6, vr: (Math.random() - .5) * 3 });
+  }
+
+  function loop(t) {
+    if (!running) return;
+    const dt = Math.min(.05, (t - last) / 1000); last = t;
+    spawnT -= dt;
+    if (spawnT <= 0) { spawn(); spawnT = Math.max(.45, .95 - score * .04); }
+    sled.x += (sled.tx - sled.x) * Math.min(1, dt * 14);
+
+    for (const it of items) { it.y += it.v * dt; it.rot += it.vr * dt; }
+    items = items.filter(it => {
+      const hit = it.y > sled.y - 24 && it.y < sled.y + 14 && Math.abs(it.x - sled.x) < sled.w / 2 + 6;
+      if (hit) {
+        if (it.coal) { lives--; shake = .35; navigator.vibrate?.(120); }
+        else { score++; }
+        updateHud();
+        return false;
+      }
+      return it.y < H + 40;
+    });
+
+    // dessin
+    px.save();
+    px.clearRect(0, 0, W, H);
+    if (shake > 0) { shake -= dt; px.translate((Math.random() - .5) * 10, 0); }
+    // sol enneigé
+    px.fillStyle = "rgba(247,244,238,.92)";
+    px.beginPath(); px.moveTo(0, H - 14);
+    for (let x = 0; x <= W; x += 20) px.lineTo(x, H - 14 - Math.sin(x / 40) * 4);
+    px.lineTo(W, H); px.lineTo(0, H); px.fill();
+
+    px.textAlign = "center"; px.textBaseline = "middle";
+    px.font = "34px system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+    for (const it of items) {
+      px.save(); px.translate(it.x, it.y); px.rotate(it.rot * .2);
+      px.fillText(it.emoji, 0, 0); px.restore();
+    }
+    px.font = "52px system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+    px.fillText("🛷", sled.x, sled.y);
+    px.restore();
+
+    if (score >= OBJECTIF) { running = false; return win(); }
+    if (lives <= 0) { running = false; return lose(); }
+    requestAnimationFrame(loop);
+  }
+
+  function lose() {
+    px.fillStyle = "rgba(13,43,36,.75)"; px.fillRect(0, 0, W, H);
+    px.fillStyle = "#f7f4ee"; px.textAlign = "center";
+    px.font = "800 22px Nunito, sans-serif";
+    px.fillText("Oups, trop de charbon !", W / 2, H / 2 - 16);
+    px.font = "700 16px Nunito, sans-serif";
+    px.fillText("Touche pour réessayer", W / 2, H / 2 + 16);
+    pc.addEventListener("pointerdown", () => startGame(), { once: true });
+  }
+
+  // ---------- étape 3 : révélation ----------
+  function win() {
+    show("reveal");
+    const box = $("boxOpen");
+    box.classList.remove("go"); void box.offsetWidth;
+    $("lineC").classList.remove("show"); $("lineT").classList.remove("show");
+    $("result").classList.remove("show");
+    $("status").textContent = "";
+    setTimeout(() => box.classList.add("go"), 300);
+    setTimeout(() => { $("lineC").classList.add("show"); }, 2300);
+    let n = 5;
+    const tick = () => {
+      $("status").textContent = n > 0 ? "Résultat dans " + n + "…" : "";
+      if (n === 2) $("lineT").classList.add("show");
+      if (n-- > 0) setTimeout(tick, 1000);
+      else { $("result").classList.add("show"); $("revealTitle").textContent = "Surprise !"; confetti(); }
+    };
+    setTimeout(tick, 2200);
+  }
+
+  $("againBtn").onclick = () => { $("revealTitle").textContent = "Bravo !"; show("intro"); };
+
+  // ---------- confettis ----------
+  function confetti() {
+    if (reduce) return;
+    const c = $("confetti"), x = c.getContext("2d"), d = devicePixelRatio || 1;
+    c.width = innerWidth * d; c.height = innerHeight * d; x.setTransform(d, 0, 0, d, 0, 0);
+    const cols = ["#c8313b", "#e9b949", "#f7f4ee", "#e0457b", "#8fc7e8", "#3fa66b"];
+    const ps = Array.from({ length: 160 }, () => ({
+      x: innerWidth / 2, y: innerHeight * .45,
+      vx: (Math.random() - .5) * 12, vy: -Math.random() * 13 - 3,
+      s: 5 + Math.random() * 6, c: cols[Math.floor(Math.random() * cols.length)],
+      r: Math.random() * 6, vr: (Math.random() - .5) * .4
+    }));
+    let f = 0;
+    (function step() {
+      x.clearRect(0, 0, innerWidth, innerHeight);
+      for (const p of ps) {
+        p.vy += .3; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c;
+        x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); x.restore();
+      }
+      if (++f < 220) requestAnimationFrame(step); else x.clearRect(0, 0, innerWidth, innerHeight);
+    })();
+  }
+})();
+</script>
+</body>
+</html>
